@@ -1,0 +1,320 @@
+
+fn split(haystack str, needle str) List<StrSlice> {
+  split(haystack.slice(), needle.slice())
+}
+fn split(haystack str, needle StrSlice) List<StrSlice> {
+  split(haystack.slice(), needle)
+}
+fn split(haystack StrSlice, needle str) List<StrSlice> {
+  split(haystack, needle.slice())
+}
+fn split(haystack! StrSlice, needle StrSlice) List<StrSlice> {
+  result = List<StrSlice>();
+
+  while (true) {
+    maybeFirstAndRest = haystack.splitOnce(needle);
+    if (maybeFirstAndRest.isEmpty()) {
+      result.add(haystack);
+      ret result;
+    }
+    (first, rest) = maybeFirstAndRest.get();
+    result.add(first);
+    mut haystack = rest;
+  }
+
+  panic("unreachable");
+}
+
+
+fn isWhitespace(s str) { isWhitespace(s.slice()) }
+fn isWhitespace(s StrSlice) {
+  not " \r\n\t".find(s).isEmpty();
+}
+
+
+struct InputIter {
+  rest! StrSlice;
+}
+fn nextIs(self &InputIter, needle str) bool {
+  self.rest.startsWith(needle)
+}
+fn skipExpect(self &InputIter, needle str) {
+  vassert(self.rest.startsWith(needle), "Expected " + needle);
+  mut self.rest = self.rest.slice(needle.len());
+}
+fn skipIfIs(self &InputIter, needle str) bool {
+  self.skipIfIs(needle.slice())
+}
+fn skipIfIs(self &InputIter, needle StrSlice) bool {
+  = if (self.rest.startsWith(needle)) {
+      mut self.rest = self.rest.slice(needle.len());
+      = true;
+    } else {
+      = false;
+    }
+}
+fn getUntilExpected(self &InputIter, splitNeedle str) StrSlice {
+  maybeLineAndRest = self.rest.splitOnce(splitNeedle);
+  if (maybeLineAndRest.isEmpty()) {
+    panic("Expected attribute line or --- but received:\n" + self.rest);
+  }
+  (line, newRest) = maybeLineAndRest.get();
+  mut self.rest = newRest;
+  = line;
+}
+fn getUntilMaybe(self &InputIter, splitNeedle str) StrSlice {
+  maybeLineAndRest = self.rest.splitOnce(splitNeedle);
+  if (maybeLineAndRest.isEmpty()) {
+    line = self.rest;
+    mut self.rest = "".slice();
+    ret line;
+  }
+  (line, newRest) = maybeLineAndRest.get();
+  mut self.rest = newRest;
+  ret line;
+}
+fn getNext(self &InputIter) StrSlice {
+  result = self.rest.slice(0, 1);
+  mut self.rest = self.rest.slice(1);
+  = result;
+}
+fn hasNext(self &InputIter) bool {
+  self.rest != ""
+}
+
+
+struct Output {
+  parts List<StrSlice>;
+}
+fn Output() Output {
+  Output(List<StrSlice>())
+}
+fn assembleStr(output &Output) str {
+  result! = "";
+  each (output.parts) (s){
+    mut result = result + s;
+  }
+  ret result;
+}
+fn print(self &Output, s str) {
+  self.print(s.slice());
+}
+fn print(self &Output, s StrSlice) {
+  self.parts.add(s);
+}
+fn print(self &Output, i int) {
+  self.print(str(i).slice());
+}
+fn println(self &Output, s str) {
+  self.print(s);
+  self.print("\n");
+}
+fn println(self &Output, s StrSlice) {
+  self.print(s);
+  self.print("\n");
+}
+fn println(self &Output, i int) {
+  self.print(i);
+  self.print("\n");
+}
+
+
+
+struct CollectedNotes {
+  noteIds List<StrSlice>;
+  noteContents HashMap<StrSlice, Output, StrSliceHasher, StrSliceEquator>;
+}
+fn CollectedNotes() CollectedNotes {
+  CollectedNotes(
+    List<StrSlice>(),
+    HashMap<StrSlice, Output, StrSliceHasher, StrSliceEquator>(
+      StrSliceHasher(), StrSliceEquator()))
+}
+
+fn addInlineNote(
+    output &Output,
+    self &CollectedNotes,
+    noteContents StrSlice) {
+  if (noteContents.startsWith("#")) {
+    id = noteContents;
+    vassert(not self.noteIds.contains(id), "Note " + id + " already exists!");
+    self.noteIds.add(id);
+    output.print(" <note>" + id + "</note>");
+  } else {
+    subNotes = CollectedNotes();
+    subNoteOutput = Output();
+    parseLine(&subNoteOutput, &subNotes, noteContents);
+
+    id = self.noteIds.len().str().slice();
+    self.noteIds.add(id);
+    self.noteContents.add(id, subNoteOutput);
+    output.print(" <note>" + id + "</note>");
+  }
+}
+fn addSeparateNote(
+    self &CollectedNotes,
+    id StrSlice,
+    noteOutput Output) {
+  self.noteContents.add(id, noteOutput);
+}
+
+
+fn parseList(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    paragraph StrSlice) {
+
+}
+
+
+fn parseSeparateNotes(
+    collectedNotes &CollectedNotes,
+    section! StrSlice) {
+  iter = InputIter(section.trim());
+  iter.skipExpect("#");
+  while (iter.hasNext()) {
+    id = ("#" + iter.getUntilExpected(":")).slice();
+    noteContents = iter.getUntilMaybe("#").trim();
+    vassert(not noteContents.has("\n\n\n"), "Note shouldnt contain section break");
+    noteOutput = Output();
+    parseSection(&noteOutput, collectedNotes, noteContents);
+    collectedNotes.addSeparateNote(id, noteOutput);
+  }
+}
+
+fn flushNotes(collectedNotes CollectedNotes, output &Output) {
+  output.println("<notes>");
+  each (collectedNotes.noteIds) (noteId){
+    vassert(collectedNotes.noteContents.has(noteId), noteId + " not in notes?");
+    noteContents = collectedNotes.noteContents.get(noteId)^.get();
+
+    output.println("<note id=\"" + noteId + "\">\n" + noteContents.assembleStr() + "\n</note>");
+  }
+  output.println("</notes>");
+}
+
+fn parseLine(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    line StrSlice) {
+  // We add spaces before and after to make the below
+  // pattern matching easier. Switch to regex soon instead!
+  iter = InputIter((" " + line + " ").slice());
+
+  while (iter.hasNext()) {
+    if (iter.skipIfIs(" *")) {
+      output.print(" <b>");
+    } else if (iter.skipIfIs("* ")) {
+      output.print("</b> ");
+    } else if (iter.skipIfIs(" _")) {
+      output.print(" <i>");
+    } else if (iter.skipIfIs("_ ")) {
+      output.print("</i> ");
+    } else if (iter.skipIfIs(" {")) {
+      note = iter.getUntilExpected("}");
+      addInlineNote(&output, collectedNotes, note);
+    } else {
+      output.print(iter.getNext());
+    }
+  }
+}
+
+fn parseParagraph(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    paragraph! StrSlice) {
+  mut paragraph = paragraph.trim();
+
+  if (paragraph.startsWith(" * ")) {
+    parseList(output, collectedNotes, paragraph);
+  } else {
+    parseLine(output, collectedNotes, paragraph);
+  }
+}
+
+
+fn parseSection(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    section StrSlice) {
+  each (&section.split("\n\n")) (paragraph!){
+    mut paragraph = paragraph.trim();
+    output.println("<p>");
+    parseParagraph(&output, &collectedNotes, paragraph);
+    output.println("");
+    output.println("</p>");
+  }
+}
+
+fn main() {
+  s = readFileAsString("test/simple.vmd");
+  input = InputIter(s.slice());
+
+  title! = "".slice();
+  author! = "".slice();
+  date! = "".slice();
+
+  if (input.skipIfIs("---\n")) {
+    while (not input.skipIfIs("---\n")) {
+      line = input.getUntilExpected("\n");
+
+      maybeAttrNameAndValue = line.splitOnce(":");
+      if (maybeAttrNameAndValue.isEmpty()) {
+        panic("Invalid attribute line, must have a colon in it! Received:\n" + line);
+      }
+      (attrName!, attrValue) = maybeAttrNameAndValue.get();
+      mut attrName = attrName.trim();
+      mut attrValue = attrValue.trim();
+
+      if (attrName == "title") {
+        mut title = attrValue;
+      } else if (attrName == "author") {
+        mut author = attrValue;
+      } else if (attrName == "date") {
+        mut date = attrValue;
+      } else {
+        panic("Unknown attribute: " + attrName);
+      }
+    }
+  }
+
+  output! = Output();
+  collectedNotes! = CollectedNotes();
+
+  output.println("<title>" + title + "</title>\n");
+  output.println("<author>" + author + "</author>\n");
+  output.println("<date>" + date + "</date>\n");
+
+  output.println("<content>");
+
+  each (&input.rest.split("\n\n\n")) (section!){
+    mut section = section.trim();
+
+    if (section.startsWith("<notes/>")) {
+      mut section = section.slice("<notes/>".len());
+      (mut collectedNotes = CollectedNotes())^.flushNotes(&output);
+    } else if (section.startsWith("<notes>")) {
+      output.println("</content>");
+
+      mut section = section.slice("<notes>".len());
+      vassert(section.endsWith("</notes>"), "Section doesnt end with </notes>!");
+      mut section = section.slice(0, section.len() - "</notes>".len());
+
+      parseSeparateNotes(&collectedNotes, section);
+
+      (mut collectedNotes = CollectedNotes())^.flushNotes(&output);
+
+      output.println("<content>");
+    } else {
+      output.println("<section>");
+      parseSection(&output, &collectedNotes, section);
+      output.println("</section>");
+    }
+  }
+
+  output.println("</content>");
+
+  (mut collectedNotes = CollectedNotes())^.flushNotes(&output);
+
+  println(output.assembleStr());
+}

@@ -1,0 +1,40 @@
+---
+title: HGM
+author: Evan Ovadia
+date: Oct 17 2020
+---
+
+Regular line
+
+Here's a *bold* line
+
+
+And _an italic_ line
+
+
+One _with *both_ things* 
+
+And {note} here
+
+
+
+<notes/>
+
+
+
+And lownote {#1} here
+
+and another {#2} paragraph
+
+
+
+<notes>
+#1: a lownote is one that is too long
+
+some stuff
+
+and more stuff
+
+#2: and more note stuff here
+
+</notes>
