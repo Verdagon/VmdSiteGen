@@ -12,9 +12,11 @@ Here's a *bold* line
 And _an italic_ line
 
 
-One _with *both_ things* 
+One *with _both_ things* 
 
-And {note} here
+And [note] here
+
+And some {code that does stuff} here
 
 
 
@@ -22,10 +24,15 @@ And {note} here
 
 
 
-And lownote {#1} here
+And lownote [#1] here
 
-and another {#2} paragraph
+and another [#2] paragraph
 
+
+ * list item 1
+    * list item 1a
+    * list item 1b
+ * list item 2
 
 
 <notes>
