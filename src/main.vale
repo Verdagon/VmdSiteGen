@@ -1,4 +1,6 @@
 
+fn void() { }
+
 
 fn ltrimnl(s str) StrSlice { ltrimnl(s.slice()) }
 fn ltrimnl(s! StrSlice) StrSlice {
@@ -306,8 +308,6 @@ fn parseOther(
     output.print(next);
   }
 }
-
-fn void() { }
 
 fn parseBold(
     output &Output,
