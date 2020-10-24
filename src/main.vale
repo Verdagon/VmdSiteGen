@@ -286,33 +286,75 @@ fn flushNotes(collectedNotes CollectedNotes, output &Output) {
   output.println("</notes>");
 }
 
+
+fn parseOther(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    iter &InputIter) {
+  if (iter.previousWasBeginOrWhitespace and iter.nextIs("*")) {
+    parseBold(output, collectedNotes, iter);
+  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("_")) {
+    parseItalic(output, collectedNotes, iter);
+  } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("[")) {
+    note = iter.getUntilExpected("]");
+    addInlineNote(&output, collectedNotes, note);
+  } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("{")) {
+    code = iter.getUntilExpected("}");
+    output.print("<code>" + code + "</code>");
+  } else {
+    next = iter.getNext();
+    output.print(next);
+  }
+}
+
+fn void() { }
+
+fn parseBold(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    iter &InputIter) {
+  output.print("<b>");
+  iter.skipExpect("*");
+
+  while (iter.hasNext()) {
+    if (iter.skipIfNext("* ")) {
+      output.print("</b> ");
+      ret void();
+    } else if (iter.skipIfEndsWith("*")) {
+      output.print("</b>");
+      ret void();
+    } else {
+      parseOther(output, collectedNotes, iter);
+    }
+  }
+}
+
+fn parseItalic(
+    output &Output,
+    collectedNotes &CollectedNotes,
+    iter &InputIter) {
+  output.print("<i>");
+  iter.skipExpect("_");
+
+  while (iter.hasNext()) {
+    if (iter.skipIfNext("_ ")) {
+      output.print("</i> ");
+      ret void();
+    } else if (iter.skipIfEndsWith("_")) {
+      output.print("</i>");
+      ret void();
+    } else {
+      parseOther(output, collectedNotes, iter);
+    }
+  }
+}
+
 fn parseLine(
     output &Output,
     collectedNotes &CollectedNotes,
     iter &InputIter) {
   while (iter.hasNext()) {
-    if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("*")) {
-      output.print("<b>");
-    } else if (iter.skipIfNext("* ")) {
-      output.print("</b> ");
-    } else if (iter.skipIfEndsWith("*")) {
-      output.print("</b>");
-    } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("_")) {
-      output.print("<i>");
-    } else if (iter.skipIfNext("_ ")) {
-      output.print("</i> ");
-    } else if (iter.skipIfEndsWith("_")) {
-      output.print("</i>");
-    } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("[")) {
-      note = iter.getUntilExpected("]");
-      addInlineNote(&output, collectedNotes, note);
-    } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("{")) {
-      code = iter.getUntilExpected("}");
-      output.print("<code>" + code + "</code>");
-    } else {
-      next = iter.getNext();
-      output.print(next);
-    }
+    parseOther(output, collectedNotes, iter);
   }
 }
 
