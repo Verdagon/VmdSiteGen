@@ -1,0 +1,36 @@
+
+
+struct Output {
+  parts List<StrSlice>;
+}
+fn Output() Output {
+  Output(List<StrSlice>())
+}
+fn assembleStr(output &Output) str {
+  result! = "";
+  each (output.parts) (s){
+    mut result = result + s;
+  }
+  ret result;
+}
+fn print(self &Output, s str) {
+  self.print(s.slice());
+}
+fn print(self &Output, s StrSlice) {
+  self.parts.add(s);
+}
+fn print(self &Output, i int) {
+  self.print(str(i).slice());
+}
+fn println(self &Output, s str) {
+  self.print(s);
+  self.print("\n");
+}
+fn println(self &Output, s StrSlice) {
+  self.print(s);
+  self.print("\n");
+}
+fn println(self &Output, i int) {
+  self.print(i);
+  self.print("\n");
+}

@@ -1,0 +1,99 @@
+
+struct InputIter {
+  rest! StrSlice;
+  previousWasBeginOrWhitespace! bool;
+}
+fn nextIs(self &InputIter, needle str) bool {
+  self.rest.startsWith(needle)
+}
+fn skipExpect(self &InputIter, needle str) { skipExpect(self, needle.slice()) }
+fn skipExpect(self &InputIter, needle StrSlice) {
+  vassert(self.rest.startsWith(needle), "Expected " + needle);
+  mut self.previousWasBeginOrWhitespace =
+      isWhitespace(needle.slice(needle.len() - 1));
+  mut self.rest = self.rest.slice(needle.len());
+}
+fn skipIfNext(self &InputIter, needle str) bool { self.skipIfNext(needle.slice()) }
+fn skipIfNext(self &InputIter, needle StrSlice) bool {
+  = if (self.rest.startsWith(needle)) {
+      skipExpect(self, needle);
+      = true;
+    } else {
+      = false;
+    }
+}
+fn skipIfEndsWith(self &InputIter, needle str) bool { self.skipIfEndsWith(needle.slice()) }
+fn skipIfEndsWith(self &InputIter, needle StrSlice) bool {
+  = if (self.rest == needle) {
+      skipExpect(self, self.rest);
+      = true;
+    } else {
+      = false;
+    }
+}
+// fn getUntilExpected(self &InputIter, splitNeedle &IFunction1<mut, StrSlice, bool>) StrSlice {
+//   maybeLineAndRest = self.rest.splitOnce(splitNeedle);
+//   if (maybeLineAndRest.isEmpty()) {
+//     panic("Expected attribute line or --- but received:\n" + self.rest);
+//   }
+//   (line, newRest) = maybeLineAndRest.get();
+//   mut self.rest = newRest;
+//   = line;
+// }
+fn getUntilExpected(self &InputIter, splitNeedle str) StrSlice {
+  maybeLineAndRest = self.rest.splitOnce(splitNeedle);
+  if (maybeLineAndRest.isEmpty()) {
+    panic("Expected " + splitNeedle + " but received:\n" + self.rest);
+  }
+  (line, newRest) = maybeLineAndRest.get();
+  mut self.previousWasBeginOrWhitespace =
+      isWhitespace(line.slice(line.len()));
+  mut self.rest = newRest;
+  = line;
+}
+fn getUntilMaybe(self &InputIter, splitNeedle str) StrSlice {
+  maybeLineAndRest = self.rest.splitOnce(splitNeedle);
+  if (maybeLineAndRest.isEmpty()) {
+    line = self.rest;
+    mut self.previousWasBeginOrWhitespace =
+        isWhitespace(line.slice(line.len()));
+    mut self.rest = "".slice();
+    ret line;
+  }
+  (line, newRest) = maybeLineAndRest.get();
+  mut self.previousWasBeginOrWhitespace =
+      isWhitespace(line.slice(line.len()));
+  mut self.rest = newRest;
+  ret line;
+}
+fn getNext(self &InputIter) StrSlice {
+  result = self.rest.slice(0, 1);
+  mut self.previousWasBeginOrWhitespace = isWhitespace(result);
+  mut self.rest = self.rest.slice(1);
+  = result;
+}
+fn hasNext(self &InputIter) bool {
+  self.rest != ""
+}
+fn peek(self &InputIter) StrSlice {
+  vassert(self.hasNext(), "Can't peek, nothing left");
+  ret self.rest.slice(0, 1);
+}
+
+
+fn skipIf<F>(self &InputIter, f F) {
+  while (self.hasNext() and (f)(self.rest.slice(0, 1))) {
+    mut self.rest = self.rest.slice(1);
+  }
+}
+
+
+fn nextIsTag(originalInput &InputIter) Opt<StrSlice> {
+  input = copy(originalInput);
+
+  input.skipWhitespace();
+}
+
+fn skipWhitespace(input &InputIter, needle str) bool {
+  while (skipIf({ isWhitespace(_) })) { }
+}

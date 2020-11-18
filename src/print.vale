@@ -1,0 +1,110 @@
+
+fn printHeader(output &Output, metadata &Metadata) {
+  (title, subtitle, author, date, path, namespace) = metadata;
+  output.println("<title>" + title + "</title>\n");
+  output.println("<subtitle>" + subtitle + "</subtitle>\n");
+  output.println("<path>" + path + "</path>\n");
+  output.println("<namespace>" + namespace + "</namespace>\n");
+  output.println("<author>" + author + "</author>\n");
+  output.println("<date>" + date + "</date>\n");
+}
+
+fn printPage(output &Output, page &Page) {
+  printHeader(&output, page.metadata);
+
+  output.println("<page>");
+
+  page.members.each({ printPageMember(output, _) });
+
+  output.println("</page>");
+}
+
+fn printPageMember(output &Output, virtual this &PageMember) abstract;
+fn printPageMember(output &Output, this &CollectedNotes impl PageMember) {
+  printCollectedNotes(this, output);
+}
+fn printPageMember(output &Output, this &Section impl PageMember) {
+  printSection(output, this);
+}
+fn printSection(output &Output, this &Section) {
+  output.println("<section>");
+
+  this.members.each({ printSectionMember(output, _) });
+
+  output.println("");
+  output.println("</section>");
+}
+
+fn printSectionMember(output &Output, virtual this &SectionMember) abstract;
+fn printSectionMember(output &Output, this &UnorderedList impl SectionMember) {
+  printList(output, this);
+}
+fn printSectionMember(output &Output, this &Paragraph impl SectionMember) {
+  output.println("<p>");
+  printInlineNode(output, this.contents);
+  output.println("");
+  output.println("</p>");
+}
+
+
+
+fn printInlineNode(output &Output, virtual this &InlineNode) abstract;
+fn printInlineNode(output &Output, this &Bold impl InlineNode) {
+  output.print("<b>");
+  printInlineNode(output, this.inner);
+  output.print("</b>");
+}
+fn printInlineNode(output &Output, this &Italic impl InlineNode) {
+  output.print("<i>");
+  printInlineNode(output, this.inner);
+  output.print("</i>");
+}
+fn printInlineNode(output &Output, this &Text impl InlineNode) {
+  output.print(this.text);
+}
+fn printInlineNode(output &Output, this &Code impl InlineNode) {
+  output.print("<code>");
+  output.print(this.inner);
+  output.print("</code>");
+}
+fn printInlineNode(output &Output, this &NoteAnchor impl InlineNode) {
+  output.print("<note>" + this.name + "</note>");
+}
+fn printInlineNode(output &Output, this &Compound impl InlineNode) {
+  this.inners.each({ printInlineNode(output, _) });
+}
+
+
+
+fn printList(output &Output, list &UnorderedList) {
+  output.println("<ul>");
+
+  list.members.each({ printListMember(output, _); });
+
+  output.println("</ul>");
+}
+fn printListMember(output &Output, virtual this &ListMember) abstract;
+fn printListMember(output &Output, this &UnorderedList impl ListMember) {
+  printList(output, this);
+}
+fn printListMember(output &Output, this &ListItem impl ListMember) {
+  output.println("<li>");
+  printInlineNode(output, this.contents);
+  output.println("");
+  output.println("</li>");
+}
+
+
+
+fn printCollectedNotes(collectedNotes &CollectedNotes, output &Output) {
+  output.println("<notes>");
+  each (collectedNotes.noteIds) (noteId){
+    vassert(collectedNotes.noteContents.has(noteId), noteId + " not in notes?");
+    noteContents = collectedNotes.noteContents.get(noteId)^.get();
+
+    output.println("<note id=\"" + noteId + "\">");
+    printSection(output, noteContents);
+    output.println("</note>");
+  }
+  output.println("</notes>");
+}
