@@ -120,8 +120,8 @@ InlineNode {
   } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("[")) {
     note = iter.getUntilExpected("]");
     ret addInlineNote(collectedNotes, note);
-  } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("{")) {
-    code = iter.getUntilExpected("}");
+  } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("\{")) {
+    code = iter.getUntilExpected("\}");
     ret Code(code);
   } else {
     next = iter.getNext();

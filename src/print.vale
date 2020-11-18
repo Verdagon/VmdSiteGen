@@ -9,14 +9,29 @@ fn printHeader(output &Output, metadata &Metadata) {
   output.println("<date>" + date + "</date>\n");
 }
 
+fn ns(page &Page, class str) str {
+  page.metadata.namespace + " " + class
+}
+
 fn printPage(output &Output, page &Page) {
   printHeader(&output, page.metadata);
 
-  output.println("<page>");
+  output.println("""
+      <div className={page.ns("root")}>
+        <BlogHeader small="true" />
+
+        <div className={page.ns("page")}>
+          <div className={page.ns("columns")}>
+  """);
 
   page.members.each({ printPageMember(output, _) });
 
-  output.println("</page>");
+  output.println("""
+          </div>
+        </div>
+        <Footer/>
+      </div>
+  """);
 }
 
 fn printPageMember(output &Output, virtual this &PageMember) abstract;
