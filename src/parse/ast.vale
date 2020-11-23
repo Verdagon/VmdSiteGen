@@ -39,6 +39,13 @@ struct Paragraph {
 impl SectionMember for Paragraph;
 
 
+struct Header {
+  strength int;
+  text StrSlice;
+}
+impl SectionMember for Header;
+
+
 struct CodeSnippet { code StrSlice; }
 impl SectionMember for CodeSnippet;
 

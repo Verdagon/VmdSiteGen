@@ -138,6 +138,9 @@ fn printSection(p &PrintHelper, this &Section) {
 }
 
 fn printSectionMember(p &PrintHelper, virtual this &SectionMember) abstract;
+fn printSectionMember(p &PrintHelper, this &Header impl SectionMember) {
+  p.out.println("<h{this.strength}>{this.text}</h{this.strength}>");
+}
 fn printSectionMember(p &PrintHelper, this &UnorderedList impl SectionMember) {
   printList(p, this);
 }
