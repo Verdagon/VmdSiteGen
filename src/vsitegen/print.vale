@@ -1,0 +1,255 @@
+
+struct PrintHelper {
+  out &Output;
+  valestromPath str;
+  metadata &Metadata;
+  printedFirstNotes! bool;
+}
+
+fn ns(p &PrintHelper, class str) str {
+  p.metadata.namespace + " " + class
+}
+
+fn printPage(output &Output, valestromPath str, page &Page) {
+  p = PrintHelper(output, valestromPath, page.metadata, false);
+
+  p.out.println("""
+<!DOCTYPE html>
+<html>
+<head>
+<meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+<meta content="utf-8" http-equiv="encoding">
+<style type="text/css">
+body {
+  font-family: 'Lato', Roboto, Tahoma, Arial;
+  font-size: 12pt;
+  margin: 0;
+}
+</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>{page.metadata.title}</title>
+<link rel="stylesheet" type="text/css" href="../components/Header.css"/>
+<link rel="stylesheet" type="text/css" href="../components/Footer.css"/>
+<link rel="stylesheet" type="text/css" href="../components/Snippet.css"/>
+<link rel="stylesheet" type="text/css" href="../components/Annotated.css"/>
+<link rel="stylesheet" type="text/css" href="../common.css"/>
+<link href="https:\/\/fonts.googleapis.com/css?family=Lato|Roboto|Roboto+Mono" rel="stylesheet">
+
+<link rel="stylesheet" href="\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/agate.min.css">
+<script src="\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/highlight.min.js"></script>
+<!-- and it's easy to individually load additional languages -->
+<script charset="UTF-8"
+ src="https:\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/languages/go.min.js"></script>
+
+<!-- The core Firebase JS SDK is always required and must be listed first -->
+<script src="https:\/\/www.gstatic.com/firebasejs/7.16.1/firebase-app.js"></script>
+
+<!-- TODO: Add SDKs for Firebase products that you want to use
+     https:\/\/firebase.google.com/docs/web/setup#available-libraries -->
+<script src="https:\/\/www.gstatic.com/firebasejs/7.16.1/firebase-analytics.js"></script>
+
+<script>
+  \/\/ Your web app's Firebase configuration
+  var firebaseConfig = {
+    apiKey: " AIzaSyBGXQQdJQJ_KkEz8mz1HSia3CMBXqmpKk0 ",
+    authDomain: "valesite.firebaseapp.com",
+    databaseURL: "https:\/\/valesite.firebaseio.com",
+    projectId: "valesite",
+    storageBucket: "valesite.appspot.com",
+    messagingSenderId: "670338061455",
+    appId: "1:670338061455:web:cfbb4a2f69f9bd7a83ccfa",
+    measurementId: "G-G3JH78EBKK"
+  };
+  \/\/ Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  firebase.analytics();
+</script>
+
+<script src="./nodeModules.js"></script>
+<script src="./valeSiteComponents.js"></script>
+<script src="./everythingElse.js"></script>
+
+</head>
+<body>
+  <div id="main">
+
+    <div class="{p.ns("root")}">
+      {blogHeader(true)}
+
+      <div class="{p.ns("page")}">
+        <div class="{p.ns("columns")}">
+
+          <div class="{p.ns("left")}">
+            <div class="{p.ns("main")}">
+  """);
+
+
+  // This is the first area div, we occasionally printPageMember
+  // will close it, add some notes, and open a new one.
+  // Also print out the title and stuff in the first area.
+  p.out.println("""
+    <div class="{p.ns("area")}">
+      <div class="{p.ns("area-contents")}">
+
+        <h1 class="{p.ns("noline cozy")}" style="margin-top: 8px">{page.metadata.title}</h1 >
+        <div class="{p.ns("subtitle content cozy")}">{page.metadata.subtitle}</div>
+
+        <div class="{p.ns("content")}" style="margin-bottom: 32px"><span class="{p.ns("date")}">{page.metadata.date}</span> <span class="{p.ns("author")}">&nbsp;&mdash;&nbsp; {page.metadata.author}</span></div>
+  """);
+
+  page.members.each({ printPageMember(&p, _); });
+
+  // End the currently open area div
+  p.out.println("""
+      </div>
+    </div>
+  """);
+
+  p.out.println("""
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {blogFooter()}
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  """);
+}
+
+fn printPageMember(p &PrintHelper, virtual this &PageMember) abstract;
+fn printPageMember(p &PrintHelper, this &Notes impl PageMember) {
+  printNotes(this, p);
+}
+fn printPageMember(p &PrintHelper, this &Section impl PageMember) {
+  printSection(p, this);
+}
+fn printSection(p &PrintHelper, this &Section) {
+  p.out.println("""<section class="{p.ns("")}">""");
+
+  this.members.each({ printSectionMember(p, _) });
+
+  p.out.println("");
+  p.out.println("</section>");
+}
+
+fn printSectionMember(p &PrintHelper, virtual this &SectionMember) abstract;
+fn printSectionMember(p &PrintHelper, this &UnorderedList impl SectionMember) {
+  printList(p, this);
+}
+fn printSectionMember(p &PrintHelper, this &Paragraph impl SectionMember) {
+  p.out.println("""<p class="{p.ns("")}">""");
+  printInlineNode(p, this.contents);
+  p.out.println("");
+  p.out.println("</p>");
+}
+fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
+  header = "Vale";
+
+  writeStringToFile("highlight.vale", this.code.trimnl().str());
+  output = executeProgram("java -cp " + p.valestromPath + " net.verdagon.vale.driver.Driver highlight highlight.vale -oh highlight.html");
+  if (output != "") {
+    panic("Highlighting failed:\n" + output);
+  }
+  html = readFileAsString("highlight.html");
+
+  p.out.println("""
+    <div class="{p.ns("c-snippet root")}">
+      <div class="{p.ns("c-snippet header")}">{header}</div>
+      <div class="{p.ns("c-snippet code")}">{html}</div>
+    </div>
+  """);
+}
+
+
+
+fn printInlineNode(p &PrintHelper, virtual this &InlineNode) abstract;
+fn printInlineNode(p &PrintHelper, this &Bold impl InlineNode) {
+  p.out.print("<b>");
+  printInlineNode(p, this.inner);
+  p.out.print("</b>");
+}
+fn printInlineNode(p &PrintHelper, this &Italic impl InlineNode) {
+  p.out.print("<i>");
+  printInlineNode(p, this.inner);
+  p.out.print("</i>");
+}
+fn printInlineNode(p &PrintHelper, this &Text impl InlineNode) {
+  p.out.print(this.text);
+}
+fn printInlineNode(p &PrintHelper, this &InlineCode impl InlineNode) {
+  p.out.print("""<code>{this.inner}</code>""");
+}
+fn printInlineNode(p &PrintHelper, this &NoteAnchor impl InlineNode) {
+  p.out.print("""<a href="#note{this.internalId}">[{this.internalId}]</a>""");
+}
+fn printInlineNode(p &PrintHelper, this &Compound impl InlineNode) {
+  this.inners.each({ printInlineNode(p, _) });
+}
+
+
+
+fn printList(p &PrintHelper, list &UnorderedList) {
+  p.out.println("<ul>");
+
+  list.members.each({ printListMember(p, _); });
+
+  p.out.println("</ul>");
+}
+fn printListMember(p &PrintHelper, virtual this &ListMember) abstract;
+fn printListMember(p &PrintHelper, this &UnorderedList impl ListMember) {
+  printList(p, this);
+}
+fn printListMember(p &PrintHelper, this &ListItem impl ListMember) {
+  p.out.println("<li>");
+  printInlineNode(p, this.contents);
+  p.out.println("");
+  p.out.println("</li>");
+}
+
+
+
+fn printNotes(notes &Notes, p &PrintHelper) {
+  // End the contents div in the current area
+  p.out.println("""
+      </div>
+  """);
+  p.out.println("""<div class="{p.ns("area-notes")}">""");
+
+  if (not p.printedFirstNotes) {
+    p.out.println("""
+      <div class="c-blog m-annotated c-toc root"><b>Vale's Hybrid-Generational Memory Model, Part 1</b><ul class="c-blog m-annotated c-toc"><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#speedorsimplicity?">Speed or Simplicity?</a></li></ul><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#both!">Both!</a></li></ul><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#generationalindices!">Generational Indices!</a></li><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#objectandgenerationtables">Object and Generation Tables</a></li></ul><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#genind:ageneration+index">GenInd: A Generation + Index</a></li></ul><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#dereferencingagenind">Dereferencing a GenInd</a></li></ul><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#stage1:asimplebeginning">Stage 1: A Simple Beginning</a></li><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#stage2:addinggenerationnumbers">Stage 2: Adding Generation Numbers</a></li><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#nextsteps">Next Steps</a></li><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#afterword:anarcanetellingofwhat'stocome">Afterword: An Arcane Telling of What's to Come</a></li></ul></div>
+      <div class="{p.ns("notes-header")}"><div>Notes</div></div>
+    """);
+  }
+
+  notes.noteInternalIds.each((noteInternalId){
+    vassert(
+        notes.noteContentsByInternalId.has(noteInternalId),
+        noteInternalId + " not in notes?");
+    noteContents =
+        notes.noteContentsByInternalId.get(noteInternalId)^.get();
+
+    p.out.println("""<div id="note{noteInternalId}" class="{p.ns("note")}">""");
+    p.out.println("""<div class="{p.ns("note-starter")}">[{noteInternalId}]:</div>""");
+    printSection(p, noteContents);
+    p.out.println("</div>");
+
+    mut noteInternalId = noteInternalId + 1;
+  });
+
+  p.out.println("</div>");
+
+  // End the current area div, start a new one and start up a contents div
+  p.out.println("""
+    </div>
+    <div class="{p.ns("area")}">
+      <div class="{p.ns("area-contents")}">
+  """);
+
+  mut p.printedFirstNotes = true;
+}

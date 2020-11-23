@@ -76,3 +76,15 @@ fn isWhitespace(s! StrSlice) bool {
 }
 
 
+fn executeProgram(command str) str extern;
+
+// struct TestStruct {
+//   x int;
+//   s str;
+// }
+// fn newTestStruct(x int, s str) TestStruct export {
+//   TestStruct(x, s)
+// }
+// fn dropTestStruct(this TestStruct) void export { }
+// fn TestStruct_get_x(testStruct &TestStruct) int export { testStruct.x }
+// fn TestStruct_get_s(testStruct &TestStruct) str export { testStruct.s }

@@ -3,6 +3,9 @@ struct InputIter {
   rest! StrSlice;
   previousWasBeginOrWhitespace! bool;
 }
+fn copy(iter &InputIter) InputIter {
+  InputIter(iter.rest, iter.previousWasBeginOrWhitespace)
+}
 fn nextIs(self &InputIter, needle str) bool {
   self.rest.startsWith(needle)
 }
@@ -94,6 +97,10 @@ fn nextIsTag(originalInput &InputIter) Opt<StrSlice> {
   input.skipWhitespace();
 }
 
-fn skipWhitespace(input &InputIter, needle str) bool {
+fn skipWhitespace(input &InputIter) {
   while (skipIf({ isWhitespace(_) })) { }
+}
+
+fn skipNewlines(input &InputIter) {
+  while (input.skipIfNext("\n")) {}
 }

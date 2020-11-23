@@ -1,0 +1,13 @@
+
+fn blogFooter() str {
+  ret """
+    <div class="c-footer root">
+      <div class="c-footer copyright">
+        Copyright © 2020 Evan Ovadia - Previously known as GelLLVM
+      </div>
+      <div class="c-footer everest">
+        (Not to be confused with Project Everest's <a href="https:\/\/github.com/project-everest/vale">VALE: Verified Assembly Language for Everest</a>)
+      </div>
+    </div>
+  """;
+}

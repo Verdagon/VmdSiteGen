@@ -1,0 +1,20 @@
+
+// fn doThing() int extern;
+
+fn main() {
+  if (numMainArgs() < 4) {
+    println("Usage: " + getMainArg(0) + " input.vmd output.html Valestrom.jar");
+    ret void();
+  }
+
+  inFilepath = getMainArg(1);
+  outFilepath = getMainArg(2);
+  valestromPath = getMainArg(3);
+
+  page = parse(inFilepath);
+
+  output = Output();
+  printPage(&output, valestromPath, &page);
+
+  writeStringToFile(outFilepath, output.assembleStr());
+}

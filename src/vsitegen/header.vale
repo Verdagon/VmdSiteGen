@@ -1,0 +1,34 @@
+
+fn blogHeader(small bool) str {
+  vorb =
+    """
+      <div class="header vorb-container">
+        <div class="header vorb"></div>
+      </div>
+    """;
+  title =
+    """
+      <div class="header title"><span class="header explorations">Explorations</span> in <span class="header vale">Vale</span></div>
+    """;
+  links =
+    """
+      <div class="header links">
+        <a href="/">Home</a>
+        <a href="https:\/\/reddit.com/r/Vale">r/Vale</a>
+        <a href="https:\/\/discord.gg/SNB8yGH">Discord</a>
+      </div>
+    """;
+  ret
+    """
+      <div class="header root {if (small) {" small"} else {""}}">
+        <div class="header contents">
+          <a href="/">{vorb}</a>
+          <div class="header text">
+            <a href="/">{title}</a>
+          </div>
+
+          {links}
+        </div>
+      </div>
+    """;
+}

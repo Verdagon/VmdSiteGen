@@ -21,17 +21,13 @@ struct Section {
 impl PageMember for Section;
 
 
-struct CollectedNotes {
-  noteIds List<StrSlice>;
-  noteContents HashMap<StrSlice, Section, StrSliceHasher, StrSliceEquator>;
+
+
+struct Notes {
+  noteInternalIds List<int>;
+  noteContentsByInternalId HashMap<int, Section, IntHasher, IntEquator>;
 }
-impl PageMember for CollectedNotes;
-fn CollectedNotes() CollectedNotes {
-  CollectedNotes(
-    List<StrSlice>(),
-    HashMap<StrSlice, Section, StrSliceHasher, StrSliceEquator>(
-      StrSliceHasher(), StrSliceEquator()))
-}
+impl PageMember for Notes;
 
 
 
@@ -41,6 +37,11 @@ struct Paragraph {
   contents InlineNode;
 }
 impl SectionMember for Paragraph;
+
+
+struct CodeSnippet { code StrSlice; }
+impl SectionMember for CodeSnippet;
+
 
 struct UnorderedList {
   members List<ListMember>;
@@ -70,8 +71,8 @@ impl InlineNode for Italic;
 struct Text { text StrSlice; }
 impl InlineNode for Text;
 
-struct Code { inner StrSlice; }
-impl InlineNode for Code;
+struct InlineCode { inner StrSlice; }
+impl InlineNode for InlineCode;
 
-struct NoteAnchor { name StrSlice; }
+struct NoteAnchor { internalId int; }
 impl InlineNode for NoteAnchor;
