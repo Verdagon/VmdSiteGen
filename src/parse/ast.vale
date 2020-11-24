@@ -40,13 +40,16 @@ impl SectionMember for Paragraph;
 
 
 struct Header {
-  strength int;
+  level int;
   text StrSlice;
 }
 impl SectionMember for Header;
 
 
-struct CodeSnippet { code StrSlice; }
+struct CodeSnippet {
+  language StrSlice;
+  code StrSlice;
+}
 impl SectionMember for CodeSnippet;
 
 
@@ -71,6 +74,12 @@ impl InlineNode for Compound;
 
 struct Bold { inner InlineNode; }
 impl InlineNode for Bold;
+
+struct Link {
+  text StrSlice;
+  url StrSlice;
+}
+impl InlineNode for Link;
 
 struct Italic { inner InlineNode; }
 impl InlineNode for Italic;

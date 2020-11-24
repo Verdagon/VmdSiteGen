@@ -32,6 +32,8 @@ fn parse(filepath str) Page {
   pageMembers = List<PageMember>();
 
   while (iter.hasNext()) {
+    iter.skipNewlines();
+
     if (iter.skipIfNext("<notes/>")) {
       pageMembers.add(Notes(mut notesCollector = NotesCollector(notesCollector.nextNoteInternalId)));
     } else if (iter.nextIs("<notes>")) {
@@ -45,7 +47,6 @@ fn parse(filepath str) Page {
               &IFunction1<mut, &InputIter, bool>((iter){
                 ret iter.hasNext() and not iter.nextIs("\n\n\n");
               }));
-      iter.skipIfNext("\n\n\n");
       pageMembers.add(section);
     }
   }
@@ -121,8 +122,6 @@ UnorderedList {
 
 
 
-  currentIndentation! = 1;
-
   while ((continueF)(iter) and iter.nextIsListItem()) {
     iter.skipNewlines();
     thisListItemIndentation! = 1;
@@ -131,18 +130,14 @@ UnorderedList {
     }
     iter.skipExpect(" * ");
 
-    while (thisListItemIndentation > currentIndentation) {
+    while (thisListItemIndentation > openLists.len()) {
       newList = UnorderedList(List<ListMember>());
       newListBorrow = &newList;
       openLists.get(openLists.len() - 1).get().members.add(newList);
       openLists.add(newListBorrow);
-
-      mut currentIndentation = currentIndentation + 1;
     }
-    while (thisListItemIndentation < currentIndentation) {
+    while (thisListItemIndentation < openLists.len()) {
       openLists.remove(openLists.len() - 1);
-
-      mut currentIndentation = currentIndentation - 1;
     }
 
     lineContents =
@@ -153,11 +148,6 @@ UnorderedList {
               ret (continueF)(iter) and not iter.nextIs("\n");
             }));
     openLists.get(openLists.len() - 1).get().members.add(ListItem(lineContents));
-  }
-
-  while (currentIndentation > 0) {
-    openLists.remove(openLists.len() - 1);
-    mut currentIndentation = currentIndentation - 1;
   }
 
   ret rootList;
@@ -181,7 +171,7 @@ fn parseSeparateNotes(
   while ((continueF)(iter)) {
     iter.skipNewlines();
     iter.skipExpect("#");
-    noteId = ("#" + iter.getUntilExpected(":")).slice();
+    noteId = iter.getUntilExpected(":");
 
     noteOutput =
         parseSection(
@@ -206,8 +196,10 @@ Opt<InlineNode> {
     ret Some<InlineNode>(parseBold(notesCollector, iter));
   } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("_")) {
     ret Some<InlineNode>(parseItalic(notesCollector, iter));
-  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("[")) {
+  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("[#")) {
     ret Some<InlineNode>(addInlineNote(notesCollector, iter));
+  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("[")) {
+    ret Some<InlineNode>(addLink(notesCollector, iter));
   } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("\{")) {
     code = iter.getUntilExpected("\}");
     ret Some<InlineNode>(InlineCode(code));
@@ -263,10 +255,8 @@ Bold {
         if (not iter.hasNext()) {
           panic("Must end bold!");
           ret false;
-        } else if (iter.nextIs("* ") or iter.nextIs("*.")) {
+        } else if (iter.nextIs("*")) {
           iter.skipExpect("*");
-          ret false;
-        } else if (iter.skipIfEndsWith("*")) {
           ret false;
         } else {
           ret true;
@@ -338,19 +328,21 @@ StrSlice {
 
 
 fn parseCodeSnippet(iter &InputIter) CodeSnippet {
-  iter.skipExpect("<code>");
+  iter.skipExpect("\{\{\{");
+
+  lang = iter.getUntilExpected("\n");
 
   code =
       parseTextUntil(
           iter,
           &IFunction1<mut, &InputIter, bool>((it){
             if (not it.hasNext()) {
-              panic("<code> must have matching </code>!");
+              panic("\{\{\{ must have matching }}}!");
             }
-            ret not it.skipIfNext("</code>");
+            ret not it.skipIfNext("}}}");
           }));
 
-  ret CodeSnippet(code);
+  ret CodeSnippet(lang, code);
 }
 
 
@@ -364,7 +356,7 @@ Section {
   while ((continueF)(&iter)) {
     iter.skipNewlines();
 
-    if (iter.nextIs("<code>")) {
+    if (iter.nextIs("\{\{\{")) {
       sectionMembers.add(parseCodeSnippet(&iter));
     } else if (iter.nextIs("#")) {
       headerStrength! = 0;
@@ -405,16 +397,50 @@ Section {
 
 
 
+
+fn addLink(
+    self &NotesCollector,
+    iter &InputIter)
+Link {
+  iter.skipExpect("[");
+  linkText = iter.getUntilExpected("]");
+  iter.skipExpect("(");
+  linkUrl = iter.getUntilExpected(")");
+  ret Link(linkText, linkUrl);
+}
+
+
 fn addInlineNote(
     self &NotesCollector,
     iter &InputIter)
 NoteAnchor {
-  iter.skipExpect("[");
+  iter.skipExpect("[#");
 
   internalId = (mut self.nextNoteInternalId = self.nextNoteInternalId + 1);
   self.noteInternalIds.add(internalId);
 
-  if (iter.nextIs("#")) {
+  // If theres just space after the hash, then we're defining the note's text inline.
+  if (iter.skipIfNext(" ")) {
+    subNotes = NotesCollector(0);
+    subNoteContents =
+        parseInlines(
+            &subNotes,
+            iter,
+            &IFunction1<mut, &InputIter, bool>((iter){
+              if (not iter.hasNext()) {
+                panic("Must end note!");
+              }
+              ret not iter.skipIfNext("]");
+            }));
+
+    println("added inline note");
+
+    paragraph = Paragraph(subNoteContents);
+    section = Section(List<SectionMember>());
+    section.members.add(paragraph);
+
+    self.noteContentsByInternalId.add(internalId, section);
+  } else {
     userNoteId =
         iter.parseTextUntil(
             &IFunction1<mut, &InputIter, bool>((it){
@@ -428,25 +454,10 @@ NoteAnchor {
         not self.internalIdByUserId.has(userNoteId),
         "Note " + userNoteId + " already exists!");
 
+    println("Adding user note id " + userNoteId);
+
     self.internalIdByUserId.add(userNoteId, internalId);
     self.userIdByInternalId.add(internalId, userNoteId);
-  } else {
-    subNotes = NotesCollector(0);
-    subNoteContents =
-        parseInlines(
-            &subNotes,
-            iter,
-            &IFunction1<mut, &InputIter, bool>((iter){
-              if (not iter.hasNext()) {
-                panic("Must end note!");
-              }
-              ret not iter.skipIfNext("]");
-            }));
-    paragraph = Paragraph(subNoteContents);
-    section = Section(List<SectionMember>());
-    section.members.add(paragraph);
-
-    self.noteContentsByInternalId.add(internalId, section);
   }
 
   ret NoteAnchor(internalId);

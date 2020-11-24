@@ -4,14 +4,33 @@ struct PrintHelper {
   valestromPath str;
   metadata &Metadata;
   printedFirstNotes! bool;
+  tableOfContents &UnorderedList;
+  headersRendered! int;
 }
 
 fn ns(p &PrintHelper, class str) str {
   p.metadata.namespace + " " + class
 }
 
+
+struct TableOfContentsBuilder {
+  headers List<&Header>;
+}
+
+
 fn printPage(output &Output, valestromPath str, page &Page) {
-  p = PrintHelper(output, valestromPath, page.metadata, false);
+
+  tocRootList = UnorderedList(List<ListMember>());
+  p = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0);
+
+  // A stack of all the currently open lists.
+  openTocLists = List<&UnorderedList>();
+  openTocLists.add(&tocRootList);
+
+  page.members.each({ populateTableOfContents(&p, &openTocLists, _); });
+  mut p.headersRendered = 0;
+
+
 
   p.out.println("""
 <!DOCTYPE html>
@@ -121,6 +140,42 @@ body {
   """);
 }
 
+
+fn populateTableOfContents(p &PrintHelper, openTocLists &List<&UnorderedList>, virtual this &PageMember) abstract;
+fn populateTableOfContents(p &PrintHelper, openTocLists &List<&UnorderedList>, this &Notes impl PageMember) { }
+fn populateTableOfContents(p &PrintHelper, openTocLists &List<&UnorderedList>, this &Section impl PageMember) {
+  this.members.each({ populateTableOfContents2(p, openTocLists, _); });
+}
+
+fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, virtual this &SectionMember) abstract;
+fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, header &Header impl SectionMember) {
+  while (header.level > openTocLists.len()) {
+    newList = UnorderedList(List<ListMember>());
+    newListBorrow = &newList;
+    openTocLists.get(openTocLists.len() - 1).get().members.add(newList);
+    openTocLists.add(newListBorrow);
+  }
+  while (header.level < openTocLists.len()) {
+    openTocLists.remove(openTocLists.len() - 1);
+  }
+
+  openTocLists.get(openTocLists.len() - 1).get()
+      .members.add(
+          ListItem(
+              Link(
+                  header.text,
+                  ("#header" + p.headersRendered).slice())));
+  mut p.headersRendered = p.headersRendered + 1;
+}
+fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &UnorderedList impl SectionMember) { }
+fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &Paragraph impl SectionMember) { }
+fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &CodeSnippet impl SectionMember) { }
+
+
+
+
+
+
 fn printPageMember(p &PrintHelper, virtual this &PageMember) abstract;
 fn printPageMember(p &PrintHelper, this &Notes impl PageMember) {
   printNotes(this, p);
@@ -139,7 +194,8 @@ fn printSection(p &PrintHelper, this &Section) {
 
 fn printSectionMember(p &PrintHelper, virtual this &SectionMember) abstract;
 fn printSectionMember(p &PrintHelper, this &Header impl SectionMember) {
-  p.out.println("<h{this.strength}>{this.text}</h{this.strength}>");
+  p.out.println("""<h{this.level + 1} class="{p.ns("")}" id="header{p.headersRendered}">{this.text}</h{this.level + 1}>""");
+  mut p.headersRendered = p.headersRendered + 1;
 }
 fn printSectionMember(p &PrintHelper, this &UnorderedList impl SectionMember) {
   printList(p, this);
@@ -151,14 +207,19 @@ fn printSectionMember(p &PrintHelper, this &Paragraph impl SectionMember) {
   p.out.println("</p>");
 }
 fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
-  header = "Vale";
+  header = this.language;
 
-  writeStringToFile("highlight.vale", this.code.trimnl().str());
-  output = executeProgram("java -cp " + p.valestromPath + " net.verdagon.vale.driver.Driver highlight highlight.vale -oh highlight.html");
-  if (output != "") {
-    panic("Highlighting failed:\n" + output);
-  }
-  html = readFileAsString("highlight.html");
+  html =
+    if (this.language == "Vale" or this.language == "vale") {
+      writeStringToFile("highlight.vale", this.code.trimnl().str());
+      output = executeProgram("java -cp " + p.valestromPath + " net.verdagon.vale.driver.Driver highlight highlight.vale -oh highlight.html");
+      if (output != "") {
+        panic("Highlighting failed:\n" + output);
+      }
+      = readFileAsString("highlight.html");
+    } else {
+      = this.code.trimnl().str();
+    };
 
   p.out.println("""
     <div class="{p.ns("c-snippet root")}">
@@ -185,10 +246,13 @@ fn printInlineNode(p &PrintHelper, this &Text impl InlineNode) {
   p.out.print(this.text);
 }
 fn printInlineNode(p &PrintHelper, this &InlineCode impl InlineNode) {
-  p.out.print("""<code>{this.inner}</code>""");
+  p.out.print("""<span class="{p.ns("inline-code")}">{this.inner}</span>""");
+}
+fn printInlineNode(p &PrintHelper, this &Link impl InlineNode) {
+  p.out.print("""<a class="{p.ns("")}" href="{this.url}">{this.text}</a>""");
 }
 fn printInlineNode(p &PrintHelper, this &NoteAnchor impl InlineNode) {
-  p.out.print("""<a href="#note{this.internalId}">[{this.internalId}]</a>""");
+  p.out.print("""<a class="{p.ns("")}" href="#note{this.internalId}">[{this.internalId}]</a>""");
 }
 fn printInlineNode(p &PrintHelper, this &Compound impl InlineNode) {
   this.inners.each({ printInlineNode(p, _) });
@@ -197,7 +261,7 @@ fn printInlineNode(p &PrintHelper, this &Compound impl InlineNode) {
 
 
 fn printList(p &PrintHelper, list &UnorderedList) {
-  p.out.println("<ul>");
+  p.out.println("""<ul class="{p.ns("")}">""");
 
   list.members.each({ printListMember(p, _); });
 
@@ -208,7 +272,7 @@ fn printListMember(p &PrintHelper, this &UnorderedList impl ListMember) {
   printList(p, this);
 }
 fn printListMember(p &PrintHelper, this &ListItem impl ListMember) {
-  p.out.println("<li>");
+  p.out.println("""<li class="{p.ns("")}">""");
   printInlineNode(p, this.contents);
   p.out.println("");
   p.out.println("</li>");
@@ -225,7 +289,12 @@ fn printNotes(notes &Notes, p &PrintHelper) {
 
   if (not p.printedFirstNotes) {
     p.out.println("""
-      <div class="c-blog m-annotated c-toc root"><b>Vale's Hybrid-Generational Memory Model, Part 1</b><ul class="c-blog m-annotated c-toc"><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#speedorsimplicity?">Speed or Simplicity?</a></li></ul><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#both!">Both!</a></li></ul><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#generationalindices!">Generational Indices!</a></li><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#objectandgenerationtables">Object and Generation Tables</a></li></ul><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#genind:ageneration+index">GenInd: A Generation + Index</a></li></ul><ul class="c-blog m-annotated c-toc"><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#dereferencingagenind">Dereferencing a GenInd</a></li></ul><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#stage1:asimplebeginning">Stage 1: A Simple Beginning</a></li><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#stage2:addinggenerationnumbers">Stage 2: Adding Generation Numbers</a></li><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#nextsteps">Next Steps</a></li><li class="c-blog m-annotated c-toc"><a class="c-blog m-annotated c-toc" href="/blog/next-gen-memory-model#afterword:anarcanetellingofwhat'stocome">Afterword: An Arcane Telling of What's to Come</a></li></ul></div>
+      <div class="{p.ns("c-toc root")}">
+      <b>{p.metadata.title}</b>
+    """);
+    printList(p, p.tableOfContents);
+    p.out.println("""
+      </div>
       <div class="{p.ns("notes-header")}"><div>Notes</div></div>
     """);
   }
