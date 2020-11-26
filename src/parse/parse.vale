@@ -119,9 +119,6 @@ UnorderedList {
   openLists = List<&UnorderedList>();
   openLists.add(&rootList);
 
-
-
-
   while ((continueF)(iter) and iter.nextIsListItem()) {
     iter.skipNewlines();
     thisListItemIndentation! = 1;
@@ -133,7 +130,7 @@ UnorderedList {
     while (thisListItemIndentation > openLists.len()) {
       newList = UnorderedList(List<ListMember>());
       newListBorrow = &newList;
-      openLists.get(openLists.len() - 1).get().members.add(newList);
+      openLists.get(openLists.len() - 1).members.add(newList);
       openLists.add(newListBorrow);
     }
     while (thisListItemIndentation < openLists.len()) {
@@ -147,10 +144,36 @@ UnorderedList {
             &IFunction1<mut, &InputIter, bool>((iter){
               ret (continueF)(iter) and not iter.nextIs("\n");
             }));
-    openLists.get(openLists.len() - 1).get().members.add(ListItem(lineContents));
+    openLists.get(openLists.len() - 1).members.add(ListItem(lineContents));
   }
 
   ret rootList;
+}
+
+
+fn parseQuote(
+    notesCollector &NotesCollector,
+    iter &InputIter,
+    continueF &IFunction1<mut, &InputIter, bool>)
+Quote {
+  inlines = List<InlineNode>();
+
+  while ((continueF)(iter) and iter.nextIs("> ")) {
+    iter.skipExpect("> ");
+
+    lineContents =
+        parseInlines(
+            notesCollector,
+            &iter,
+            &IFunction1<mut, &InputIter, bool>((iter){
+              ret (continueF)(iter) and not iter.nextIs("\n");
+            }));
+    while (lineContents.inners.len() > 0) {
+      inlines.add(lineContents.inners.remove(0));
+    }
+  }
+
+  ret Quote(Compound(inlines));
 }
 
 
@@ -372,6 +395,14 @@ Section {
     } else if (iter.nextIs(" * ")) {
       sectionMembers.add(
           parseList(
+              notesCollector,
+              &iter,
+              &IFunction1<mut, &InputIter, bool>((iter){
+                ret (continueF)(iter) and not iter.nextIs("\n\n");
+              })));
+    } else if (iter.nextIs("> ")) {
+      sectionMembers.add(
+          parseQuote(
               notesCollector,
               &iter,
               &IFunction1<mut, &InputIter, bool>((iter){

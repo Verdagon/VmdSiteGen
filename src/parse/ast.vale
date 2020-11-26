@@ -38,6 +38,10 @@ struct Paragraph {
 }
 impl SectionMember for Paragraph;
 
+struct Quote {
+  contents InlineNode;
+}
+impl SectionMember for Quote;
 
 struct Header {
   level int;

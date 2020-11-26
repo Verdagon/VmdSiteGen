@@ -152,14 +152,14 @@ fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, 
   while (header.level > openTocLists.len()) {
     newList = UnorderedList(List<ListMember>());
     newListBorrow = &newList;
-    openTocLists.get(openTocLists.len() - 1).get().members.add(newList);
+    openTocLists.get(openTocLists.len() - 1).members.add(newList);
     openTocLists.add(newListBorrow);
   }
   while (header.level < openTocLists.len()) {
     openTocLists.remove(openTocLists.len() - 1);
   }
 
-  openTocLists.get(openTocLists.len() - 1).get()
+  openTocLists.get(openTocLists.len() - 1)
       .members.add(
           ListItem(
               Link(
@@ -170,6 +170,7 @@ fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, 
 fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &UnorderedList impl SectionMember) { }
 fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &Paragraph impl SectionMember) { }
 fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &CodeSnippet impl SectionMember) { }
+fn populateTableOfContents2(p &PrintHelper, openTocLists &List<&UnorderedList>, this &Quote impl SectionMember) { }
 
 
 
@@ -205,6 +206,12 @@ fn printSectionMember(p &PrintHelper, this &Paragraph impl SectionMember) {
   printInlineNode(p, this.contents);
   p.out.println("");
   p.out.println("</p>");
+}
+fn printSectionMember(p &PrintHelper, this &Quote impl SectionMember) {
+  p.out.println("""<div class="{p.ns("quote")}">""");
+  printInlineNode(p, this.contents);
+  p.out.println("");
+  p.out.println("</div>");
 }
 fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
   header = this.language;
