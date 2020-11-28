@@ -63,6 +63,26 @@ fn split(haystack! StrSlice, needle StrSlice) List<StrSlice> {
 }
 
 
+// untested
+fn replaceAll(haystack StrSlice, needle StrSlice, replacement StrSlice) {
+  result! = "";
+
+  while (true) {
+    maybeFirstAndRest = haystack.splitOnce(needle);
+    if (maybeFirstAndRest.isEmpty()) {
+      mut result = result + haystack;
+      ret result;
+    }
+    (first, rest) = maybeFirstAndRest.get();
+    result.add(first);
+    result.add(replacement);
+    mut haystack = rest;
+  }
+
+  panic("unreachable");
+}
+
+
 fn isWhitespace(s str) bool { isWhitespace(s.slice()) }
 fn isWhitespace(s! StrSlice) bool {
   while (len(s) > 0) {

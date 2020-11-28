@@ -7,9 +7,15 @@ fn blogHeader(small bool) str {
       </div>
     """;
   title =
-    """
-      <div class="header title"><span class="header explorations">Explorations</span> in <span class="header vale">Vale</span></div>
-    """;
+    if (small) {
+      """
+        <div class="header title"><span class="header explorations">Explorations</span> in <span class="header vale">Vale</span></div>
+      """
+    } else {
+      """
+        <div class="header title">The <span class="header vale">Vale</span> Programming Language</div>
+      """
+    };
   links =
     """
       <div class="header links">

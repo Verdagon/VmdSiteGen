@@ -84,23 +84,30 @@ fn peek(self &InputIter) StrSlice {
 }
 
 
-fn skipIf<F>(self &InputIter, f F) {
-  while (self.hasNext() and (f)(self.rest.slice(0, 1))) {
+fn skipIfNextChar<F>(self &InputIter, f F) bool {
+  if (self.hasNext() and (f)(self.rest.slice(0, 1))) {
+    mut self.previousWasBeginOrWhitespace = self.rest.slice(0, 1).isWhitespace();
     mut self.rest = self.rest.slice(1);
+    ret true;
+  } else {
+    ret false;
   }
 }
 
 
 fn nextIsTag(originalInput &InputIter) Opt<StrSlice> {
   input = copy(originalInput);
-
   input.skipWhitespace();
 }
 
 fn skipWhitespace(input &InputIter) {
-  while (skipIf({ isWhitespace(_) })) { }
+  while (input.skipIfNextChar(isWhitespace)) {
+    mut input.previousWasBeginOrWhitespace = true;
+  }
 }
 
 fn skipNewlines(input &InputIter) {
-  while (input.skipIfNext("\n")) {}
+  while (input.skipIfNextChar({ _ == "\n" })) {
+    mut input.previousWasBeginOrWhitespace = true;
+  }
 }

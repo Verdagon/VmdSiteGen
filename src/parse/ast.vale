@@ -11,7 +11,11 @@ struct Metadata {
   subtitle StrSlice;
   author StrSlice;
   date StrSlice;
+  realm StrSlice;
   path StrSlice;
+  seriesName StrSlice;
+  seriesEntries List<Link>;
+  layout StrSlice;
   namespace StrSlice;
 }
 
@@ -21,11 +25,9 @@ struct Section {
 impl PageMember for Section;
 
 
-
-
 struct Notes {
-  noteInternalIds List<int>;
-  noteContentsByInternalId HashMap<int, Section, IntHasher, IntEquator>;
+  ids List<int>;
+  noteContentsById HashMap<int, Section, IntHasher, IntEquator>;
 }
 impl PageMember for Notes;
 
@@ -37,6 +39,13 @@ struct Paragraph {
   contents InlineNode;
 }
 impl SectionMember for Paragraph;
+
+struct Split {
+  left List<Section>;
+  right List<Section>;
+}
+impl SectionMember for Split;
+
 
 struct Quote {
   contents InlineNode;
@@ -53,6 +62,7 @@ impl SectionMember for Header;
 struct CodeSnippet {
   language StrSlice;
   code StrSlice;
+  output StrSlice;
 }
 impl SectionMember for CodeSnippet;
 
@@ -94,5 +104,5 @@ impl InlineNode for Text;
 struct InlineCode { inner StrSlice; }
 impl InlineNode for InlineCode;
 
-struct NoteAnchor { internalId int; }
+struct NoteAnchor { id int; }
 impl InlineNode for NoteAnchor;
