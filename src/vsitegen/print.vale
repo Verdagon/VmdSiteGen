@@ -284,10 +284,13 @@ fn printSectionMember(p &PrintHelper, this &Quote impl SectionMember) {
 }
 fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
 
+  langClass = if (this.language.len() > 0) { "language-" + this.language } else { "" };
+
   p.out.print("""
-    <div class="{p.ns("c-snippet root")}">
+    <div class="{p.ns("c-snippet root {langClass}")}">
       <div class="{p.ns("c-snippet header")}">{this.language}</div>
-      <div class="{p.ns("c-snippet code")}">""");
+      <div class="{p.ns("c-snippet code")}">
+  """);
 
   codeHtml =
     if (this.language == "Vale" or this.language == "vale") {
@@ -302,13 +305,10 @@ fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
     };
   printWithChevronNotes(p, codeHtml);
 
-  p.out.println("</div>");
-
-  if (this.output != "") {
-    p.out.println("""<div class="{p.ns("c-snippet output")}">{this.output.trimnl()}</div>""");
-  }
-
-  p.out.println("</div>");
+  p.out.println("""
+      </div>
+    </div>
+  """);
 }
 
 fn printWithChevronNotes(p &PrintHelper, s StrSlice) {

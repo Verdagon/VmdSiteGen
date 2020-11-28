@@ -62,7 +62,6 @@ impl SectionMember for Header;
 struct CodeSnippet {
   language StrSlice;
   code StrSlice;
-  output StrSlice;
 }
 impl SectionMember for CodeSnippet;
 

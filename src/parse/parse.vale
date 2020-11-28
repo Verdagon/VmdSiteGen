@@ -199,16 +199,16 @@ fn parseSplit(
     notesCollector &NotesCollector,
     iter &InputIter)
 Split {
-  iter.skipExpect("<<<<<");
+  iter.skipExpect("<<<<");
   iter.skipNewlines();
 
 
   leftContinueF =
       IFunction1<mut, &InputIter, bool>((iter){
         if (not iter.hasNext()) {
-          panic("<<<<< must end with \/\/\/\/\/");
+          panic("<<<< must end with \/\/\/\/");
         }
-        ret not iter.nextIs("\/\/\/\/\/");
+        ret not iter.nextIs("\/\/\/\/");
       });
 
   leftSections = List<Section>();
@@ -224,16 +224,16 @@ Split {
     iter.skipNewlines();
   }
 
-  iter.skipExpect("\/\/\/\/\/");
+  iter.skipExpect("\/\/\/\/");
   iter.skipNewlines();
 
 
   rightContinueF =
       IFunction1<mut, &InputIter, bool>((iter){
         if (not iter.hasNext()) {
-          panic("\/\/\/\/\/ must end with >>>>>");
+          panic("\/\/\/\/ must end with >>>>");
         }
-        ret not iter.nextIs(">>>>>");
+        ret not iter.nextIs(">>>>");
       });
 
   rightSections = List<Section>();
@@ -249,7 +249,7 @@ Split {
     iter.skipNewlines();
   }
 
-  iter.skipExpect(">>>>>");
+  iter.skipExpect(">>>>");
 
   ret Split(leftSections, rightSections);
 }
@@ -455,23 +455,7 @@ fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet
                 ret not it.skipIfNext("```");
               })));
 
-  output =
-      parseChevronNoteAnchors(
-          notesCollector,
-          if (iter.skipIfNext("output")) {
-            = parseTextUntil(
-                  iter,
-                  &IFunction1<mut, &InputIter, bool>((it){
-                    if (not it.hasNext()) {
-                      panic("``` must have matching ```!");
-                    }
-                    ret not it.skipIfNext("```");
-                  }));
-          } else {
-            = "".slice();
-          });
-
-  ret CodeSnippet(lang, code.slice(), output.slice());
+  ret CodeSnippet(lang, code.slice());
 }
 
 
@@ -518,7 +502,7 @@ Section {
                 ret iter.hasNext() and not iter.nextIs("\n");
               }));
       sectionMembers.add(Header(headerStrength, headerText.trim()));
-    } else if (iter.nextIs("<<<<<")) {
+    } else if (iter.nextIs("<<<<")) {
       sectionMembers.add(parseSplit(&notesCollector, &iter));
     } else if (iter.nextIs(" * ")) {
       sectionMembers.add(
