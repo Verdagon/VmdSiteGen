@@ -117,7 +117,7 @@ fn isWordChar(s StrSlice) bool {
   if (ascii >= "A".slice().toAscii() and ascii <= "Z".slice().toAscii()) {
     ret true;
   }
-  if (ascii >= "a".slice().toAscii() and ascii <= "a".slice().toAscii()) {
+  if (ascii >= "a".slice().toAscii() and ascii <= "z".slice().toAscii()) {
     ret true;
   }
   if (ascii >= "0".slice().toAscii() and ascii <= "9".slice().toAscii()) {
