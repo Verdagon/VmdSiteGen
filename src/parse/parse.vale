@@ -16,8 +16,8 @@ fn NotesCollector(nextId int) NotesCollector {
     HashMap<int, Section, IntHasher, IntEquator>(IntHasher(), IntEquator()))
 }
 fn Notes(notesCollector NotesCollector) Notes {
-  (nextId, ids, idByName, nameById, noteContentsById) = notesCollector;
-  ret Notes(ids, noteContentsById);
+  (nextId, ids, idByName, nameById, noteContentsById) = ^notesCollector;
+  ret Notes(^ids, ^noteContentsById);
 }
 
 
@@ -25,7 +25,7 @@ fn parse(filepath str) Page {
   s = readFileAsString(filepath);
   iter = InputIter(s.slice(), true);
   
-  metadata = parseMetadata(&iter);
+  metadata = parseMetadata(iter);
 
   notesCollector! = NotesCollector(0);
 
@@ -37,17 +37,17 @@ fn parse(filepath str) Page {
     if (iter.skipIfNext("<notes/>") or iter.skipIfNext("<notes />")) {
       pageMembers.add(Notes(mut notesCollector = NotesCollector(notesCollector.nextId)));
     } else if (iter.nextIs("<notes>")) {
-      parseSeparateNotes(&notesCollector, &iter);
+      parseSeparateNotes(notesCollector, iter);
       pageMembers.add(Notes(mut notesCollector = NotesCollector(notesCollector.nextId)));
     } else {
       section =
           parseSection(
-              &notesCollector,
-              &iter,
+              notesCollector,
+              iter,
               &IFunction1<mut, &InputIter, bool>((iter){
-                ret iter.hasNext() and not iter.nextIs("\n\n\n");
+                ret iter.hasNext() and not iter.nextIs("<notes") and not iter.nextIs("\n\n\n");
               }));
-      pageMembers.add(section);
+      pageMembers.add(^section);
     }
   }
 
@@ -55,7 +55,7 @@ fn parse(filepath str) Page {
       Notes(
           mut notesCollector = NotesCollector(notesCollector.nextId)));
 
-  ret Page(metadata, pageMembers);
+  ret Page(^metadata, ^pageMembers);
 }
 
 
@@ -115,7 +115,7 @@ fn parseMetadata(input &InputIter) Metadata {
     vassert(foundEmptyLink, "No empty series entry!");
   }
 
-  ret Metadata(title, subtitle, author, date, realm, path, seriesName, seriesEntries, layout, namespace);
+  ret Metadata(title, subtitle, author, date, realm, path, seriesName, ^seriesEntries, layout, namespace);
 }
 
 
@@ -135,7 +135,7 @@ UnorderedList {
   rootList = UnorderedList(List<ListMember>());
   // A stack of all the currently open lists.
   openLists = List<&UnorderedList>();
-  openLists.add(&rootList);
+  openLists.add(rootList);
 
   while ((continueF)(iter) and iter.nextIsListItem()) {
     iter.skipNewlines();
@@ -147,8 +147,8 @@ UnorderedList {
 
     while (thisListItemIndentation > openLists.len()) {
       newList = UnorderedList(List<ListMember>());
-      newListBorrow = &newList;
-      openLists.get(openLists.len() - 1).members.add(newList);
+      newListBorrow = newList;
+      openLists.get(openLists.len() - 1).members.add(^newList);
       openLists.add(newListBorrow);
     }
     while (thisListItemIndentation < openLists.len()) {
@@ -158,14 +158,14 @@ UnorderedList {
     lineContents =
         parseLine(
             notesCollector,
-            &iter,
+            iter,
             &IFunction1<mut, &InputIter, bool>((iter){
               ret (continueF)(iter) and not iter.nextIs("\n");
             }));
-    openLists.get(openLists.len() - 1).members.add(ListItem(lineContents));
+    openLists.get(openLists.len() - 1).members.add(ListItem(^lineContents));
   }
 
-  ret rootList;
+  ret ^rootList;
 }
 
 
@@ -182,7 +182,7 @@ Quote {
     lineContents =
         parseInlines(
             notesCollector,
-            &iter,
+            iter,
             &IFunction1<mut, &InputIter, bool>((iter){
               ret (continueF)(iter) and not iter.nextIs("\n");
             }));
@@ -191,7 +191,7 @@ Quote {
     }
   }
 
-  ret Quote(Compound(inlines));
+  ret Quote(Compound(^inlines));
 }
 
 
@@ -251,7 +251,17 @@ Split {
 
   iter.skipExpect(">>>>");
 
-  ret Split(leftSections, rightSections);
+  ret Split(^leftSections, ^rightSections);
+}
+
+
+fn nextIsNoteBegin(originalIter &InputIter) bool {
+  lookaheadIter = copy(originalIter);
+  if (not lookaheadIter.skipIfNext("\n\n")) {
+    ret false;
+  }
+  lookaheadIter.skipNewlines();
+  ret lookaheadIter.skipIfNext("#");
 }
 
 
@@ -279,10 +289,10 @@ fn parseSeparateNotes(
             notesCollector,
             iter,
             &IFunction1<mut, &InputIter, bool>((iter){
-              ret (continueF)(iter) and not iter.nextIs("\n\n\n");
+              ret (continueF)(iter) and not iter.nextIsNoteBegin();
             }));
-    iter.skipIfNext("\n\n\n");
-    notesCollector.addSeparateNote(noteId, noteOutput);
+    iter.skipNewlines();
+    notesCollector.addSeparateNote(noteId, ^noteOutput);
   }
 
   iter.skipIfNext("</notes>");
@@ -293,15 +303,15 @@ fn parseInlineNode(
     notesCollector &NotesCollector,
     iter &InputIter)
 Opt<InlineNode> {
-  if (iter.previousWasBeginOrWhitespace and iter.nextIs("*")) {
+  if (not iter.previousWasWordChar and iter.nextIs("*")) {
     ret Some<InlineNode>(parseBold(notesCollector, iter));
-  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("_")) {
+  } else if (not iter.previousWasWordChar and iter.nextIs("_")) {
     ret Some<InlineNode>(parseItalic(notesCollector, iter));
-  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("[#")) {
+  } else if (iter.nextIs("[#")) {
     ret Some<InlineNode>(addInlineNote(notesCollector, iter));
-  } else if (iter.previousWasBeginOrWhitespace and iter.nextIs("[")) {
+  } else if (not iter.previousWasWordChar and iter.nextIs("[")) {
     ret Some<InlineNode>(addLink(iter));
-  } else if (iter.previousWasBeginOrWhitespace and iter.skipIfNext("`")) {
+  } else if (not iter.previousWasWordChar and iter.skipIfNext("`")) {
     code = iter.getUntilExpected("`");
     ret Some<InlineNode>(InlineCode(code));
   } else {
@@ -330,7 +340,7 @@ Compound {
         }
         inners.add(maybeInner^.get());
       } else {
-        drop(maybeInner);
+        maybeInner^.drop();
         mut currentTextNode = (currentTextNode + iter.getNext()).slice();
       }
     }
@@ -339,7 +349,7 @@ Compound {
     inners.add(Text(mut currentTextNode = "".slice()));
   }
 
-  ret Compound(inners);
+  ret Compound(^inners);
 }
 
 fn parseBold(
@@ -364,7 +374,7 @@ Bold {
         }
       }));
 
-  ret Bold(compound);
+  ret Bold(^compound);
 }
 
 fn parseItalic(
@@ -391,7 +401,7 @@ Italic {
         }
       }));
 
-  ret Italic(compound);
+  ret Italic(^compound);
 }
 
 fn parseLine(
@@ -450,9 +460,9 @@ fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet
               iter,
               &IFunction1<mut, &InputIter, bool>((it){
                 if (not it.hasNext()) {
-                  panic("``` must have matching ```!");
+                  panic("``` must have matching \\n```!");
                 }
-                ret not it.skipIfNext("```");
+                ret not it.skipIfNext("\n```");
               })));
 
   ret CodeSnippet(lang, code.slice());
@@ -486,29 +496,31 @@ fn parseSection(
 Section {
   sectionMembers = List<SectionMember>();
 
-  while ((continueF)(&iter)) {
+  while ((continueF)(iter)) {
     iter.skipNewlines();
 
     if (iter.nextIs("```")) {
-      sectionMembers.add(parseCodeSnippet(notesCollector, &iter));
+      sectionMembers.add(parseCodeSnippet(notesCollector, iter));
     } else if (iter.nextIs("#")) {
       headerStrength! = 0;
       while (iter.skipIfNext("#")) {
         mut headerStrength = headerStrength + 1;
       }
-      headerText =
-          iter.parseTextUntil(
+      headerContents =
+          parseInlines(
+              notesCollector,
+              iter,
               &IFunction1<mut, &InputIter, bool>((it){
                 ret iter.hasNext() and not iter.nextIs("\n");
               }));
-      sectionMembers.add(Header(headerStrength, headerText.trim()));
+      sectionMembers.add(Header(headerStrength, ^headerContents));
     } else if (iter.nextIs("<<<<")) {
-      sectionMembers.add(parseSplit(&notesCollector, &iter));
+      sectionMembers.add(parseSplit(notesCollector, iter));
     } else if (iter.nextIs(" * ")) {
       sectionMembers.add(
           parseList(
               notesCollector,
-              &iter,
+              iter,
               &IFunction1<mut, &InputIter, bool>((iter){
                 ret (continueF)(iter) and not iter.nextIs("\n\n");
               })));
@@ -516,7 +528,7 @@ Section {
       sectionMembers.add(
           parseQuote(
               notesCollector,
-              &iter,
+              iter,
               &IFunction1<mut, &InputIter, bool>((iter){
                 ret (continueF)(iter) and not iter.nextIs("\n\n");
               })));
@@ -524,15 +536,15 @@ Section {
       inlineNode =
           parseLine(
               notesCollector,
-              &iter,
+              iter,
               &IFunction1<mut, &InputIter, bool>((iter){
                 ret (continueF)(iter) and not iter.nextIs("\n\n");
               }));
-      sectionMembers.add(Paragraph(inlineNode));
+      sectionMembers.add(Paragraph(^inlineNode));
     }
   }
 
-  ret Section(sectionMembers);
+  ret Section(^sectionMembers);
 }
 
 
@@ -559,7 +571,7 @@ int {
   id = (mut notesCollector.nextId = notesCollector.nextId + 1);
   notesCollector.ids.add(id);
 
-  notesCollector.noteContentsById.add(id, noteContents);
+  notesCollector.noteContentsById.add(id, ^noteContents);
 
   ret id;
 }
@@ -592,7 +604,7 @@ NoteAnchor {
     subNotes = NotesCollector(0);
     subNoteContents =
         parseInlines(
-            &subNotes,
+            subNotes,
             iter,
             &IFunction1<mut, &InputIter, bool>((iter){
               if (not iter.hasNext()) {
@@ -601,11 +613,11 @@ NoteAnchor {
               ret not iter.skipIfNext("]");
             }));
 
-    paragraph = Paragraph(subNoteContents);
+    paragraph = Paragraph(^subNoteContents);
     section = Section(List<SectionMember>());
-    section.members.add(paragraph);
+    section.members.add(^paragraph);
 
-    ret NoteAnchor(addInlineFullNote(notesCollector, section));
+    ret NoteAnchor(addInlineFullNote(notesCollector, ^section));
   } else {
     noteName =
         iter.parseTextUntil(
@@ -626,13 +638,13 @@ fn addSeparateNote(
   vassert(
       self.idByName.has(noteName),
       "Note " + noteName + " doesn't exist!");
-  id = self.idByName.get(noteName)^.get();
+  id = self.idByName.get(noteName).get();
 
 
   vassert(
       not self.noteContentsById.has(id),
       "Note " + noteName + " already has contents!");
 
-  self.noteContentsById.add(id, note);
+  self.noteContentsById.add(id, ^note);
 }
 

@@ -1,10 +1,10 @@
 
 struct InputIter {
   rest! StrSlice;
-  previousWasBeginOrWhitespace! bool;
+  previousWasWordChar! bool;
 }
 fn copy(iter &InputIter) InputIter {
-  InputIter(iter.rest, iter.previousWasBeginOrWhitespace)
+  InputIter(iter.rest, iter.previousWasWordChar)
 }
 fn nextIs(self &InputIter, needle str) bool {
   self.rest.startsWith(needle)
@@ -12,8 +12,8 @@ fn nextIs(self &InputIter, needle str) bool {
 fn skipExpect(self &InputIter, needle str) { skipExpect(self, needle.slice()) }
 fn skipExpect(self &InputIter, needle StrSlice) {
   vassert(self.rest.startsWith(needle), "Expected " + needle);
-  mut self.previousWasBeginOrWhitespace =
-      isWhitespace(needle.slice(needle.len() - 1));
+  mut self.previousWasWordChar =
+      isWordChar(needle.slice(needle.len() - 1));
   mut self.rest = self.rest.slice(needle.len());
 }
 fn skipIfNext(self &InputIter, needle str) bool { self.skipIfNext(needle.slice()) }
@@ -49,8 +49,8 @@ fn getUntilExpected(self &InputIter, splitNeedle str) StrSlice {
     panic("Expected " + splitNeedle + " but received:\n" + self.rest);
   }
   (line, newRest) = maybeLineAndRest.get();
-  mut self.previousWasBeginOrWhitespace =
-      isWhitespace(line.slice(line.len()));
+  mut self.previousWasWordChar =
+      isWordChar(line.slice(line.len()));
   mut self.rest = newRest;
   = line;
 }
@@ -58,20 +58,20 @@ fn getUntilMaybe(self &InputIter, splitNeedle str) StrSlice {
   maybeLineAndRest = self.rest.splitOnce(splitNeedle);
   if (maybeLineAndRest.isEmpty()) {
     line = self.rest;
-    mut self.previousWasBeginOrWhitespace =
-        isWhitespace(line.slice(line.len()));
+    mut self.previousWasWordChar =
+        isWordChar(line.slice(line.len()));
     mut self.rest = "".slice();
     ret line;
   }
   (line, newRest) = maybeLineAndRest.get();
-  mut self.previousWasBeginOrWhitespace =
-      isWhitespace(line.slice(line.len()));
+  mut self.previousWasWordChar =
+      isWordChar(line.slice(line.len()));
   mut self.rest = newRest;
   ret line;
 }
 fn getNext(self &InputIter) StrSlice {
   result = self.rest.slice(0, 1);
-  mut self.previousWasBeginOrWhitespace = isWhitespace(result);
+  mut self.previousWasWordChar = isWordChar(result);
   mut self.rest = self.rest.slice(1);
   = result;
 }
@@ -86,7 +86,7 @@ fn peek(self &InputIter) StrSlice {
 
 fn skipIfNextChar<F>(self &InputIter, f F) bool {
   if (self.hasNext() and (f)(self.rest.slice(0, 1))) {
-    mut self.previousWasBeginOrWhitespace = self.rest.slice(0, 1).isWhitespace();
+    mut self.previousWasWordChar = self.rest.slice(0, 1).isWordChar();
     mut self.rest = self.rest.slice(1);
     ret true;
   } else {
@@ -102,12 +102,29 @@ fn nextIsTag(originalInput &InputIter) Opt<StrSlice> {
 
 fn skipWhitespace(input &InputIter) {
   while (input.skipIfNextChar(isWhitespace)) {
-    mut input.previousWasBeginOrWhitespace = true;
+    mut input.previousWasWordChar = false;
   }
 }
 
 fn skipNewlines(input &InputIter) {
   while (input.skipIfNextChar({ _ == "\n" })) {
-    mut input.previousWasBeginOrWhitespace = true;
+    mut input.previousWasWordChar = false;
   }
+}
+
+fn isWordChar(s StrSlice) bool {
+  ascii = s.slice(0, 1).toAscii();
+  if (ascii >= "A".slice().toAscii() and ascii <= "Z".slice().toAscii()) {
+    ret true;
+  }
+  if (ascii >= "a".slice().toAscii() and ascii <= "a".slice().toAscii()) {
+    ret true;
+  }
+  if (ascii >= "0".slice().toAscii() and ascii <= "9".slice().toAscii()) {
+    ret true;
+  }
+  if (ascii == "_".slice().toAscii()) {
+    ret true;
+  }
+  ret false;
 }

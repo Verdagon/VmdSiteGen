@@ -30,7 +30,7 @@ fn wrapTocInSeriesList(page &Page, tocRootList UnorderedList) UnorderedList {
     link = page.metadata.seriesEntries.remove(0);
     vassert(link.text == "" and link.url == "", "wat zork");
     seriesList.members.add(ListItem(Bold(Text(slice(page.metadata.title + " *")))));
-    seriesList.members.add(tocRootList);
+    seriesList.members.add(^tocRootList);
 
     while (page.metadata.seriesEntries.len() > 0 and
         (page.metadata.seriesEntries.get(0).text != "" or
@@ -38,26 +38,42 @@ fn wrapTocInSeriesList(page &Page, tocRootList UnorderedList) UnorderedList {
       seriesList.members.add(ListItem(page.metadata.seriesEntries.remove(0)));
     }
 
-    ret seriesList;
+    ret ^seriesList;
   } else {
-    ret tocRootList;
+    ret ^tocRootList;
   }
+}
+
+
+fn copySeriesNextLink(page &Page) Opt<Link> {
+  foundThisPage! = false;
+  seriesNextLink! Opt<Link> = None<Link>();
+  each (page.metadata.seriesEntries) (link){
+    if (link.text == "" and link.url == "") {
+      mut foundThisPage = true;
+    } else if (foundThisPage and seriesNextLink.isEmpty()) {
+      mut seriesNextLink = Some(copy(link));
+    }
+  }
+  ret ^seriesNextLink;
 }
 
 
 fn printPage(output &Output, valestromPath str, page &Page) {
 
+  seriesNextLink = copySeriesNextLink(page);
+
   unSeriesdTocRootList = UnorderedList(List<ListMember>());
 
   // A stack of all the currently open lists.
   openTocLists = List<&UnorderedList>();
-  openTocLists.add(&unSeriesdTocRootList);
-  page.members.each({ populateTableOfContents(&openTocLists, _); });
-  drop(openTocLists);
+  openTocLists.add(unSeriesdTocRootList);
+  page.members.each({ populateTableOfContents(openTocLists, _); });
+  drop(^openTocLists);
 
-  tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
+  tocRootList = wrapTocInSeriesList(page, ^unSeriesdTocRootList);
 
-  p = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList);
+  p = PrintHelper(output, valestromPath, page.metadata, false, tocRootList);
 
 
   p.out.println("""
@@ -135,15 +151,36 @@ body {
           <div class="{p.ns("area-contents")}">
   """);
 
-  printHeader(&p);
+  printHeader(p);
 
-  page.members.each({ printPageMember(&p, _); });
+  page.members.each({ printPageMember(p, _); });
 
   // End the currently open area div
   p.out.println("""
           </div>
         </div>
   """);
+
+  if (not seriesNextLink.isEmpty()) {
+    p.out.println("""
+        <div class="{p.ns("area")}">
+          <div class="{p.ns("area-contents")}">
+    """);
+
+    link = seriesNextLink.get();
+    inlines = List<InlineNode>();
+    inlines.add(Bold(Text("Next: ".slice())));
+    inlines.add(Link(link.text, link.url));
+    para = Paragraph(Compound(^inlines));
+    s = Section(List<SectionMember>());
+    s.members.add(^para);
+    printSection(p, s);
+
+    p.out.println("""
+            </div>
+          </div>
+    """);
+  }
 
   if (page.metadata.layout == "annotated") {
     p.out.println("""
@@ -164,7 +201,17 @@ body {
   """);
 }
 
-fn urlifyHeadingText(source! StrSlice) str {
+fn getHeaderText(header &Header) str {
+  textNodes = List<StrSlice>();
+  collectTextNodes(textNodes, header.contents);
+  source! = "";
+  each textNodes { mut source = source + _; }
+  ret source;
+}
+
+fn urlifyHeadingText(header &Header) str {
+  source! = getHeaderText(header).slice();
+
   result! = "";
   while (source.len() > 0) {
     char = source.slice(0, 1);
@@ -211,8 +258,8 @@ fn populateTableOfContents2(openTocLists &List<&UnorderedList>, virtual this &Se
 fn populateTableOfContents2(openTocLists &List<&UnorderedList>, header &Header impl SectionMember) {
   while (header.level > openTocLists.len()) {
     newList = UnorderedList(List<ListMember>());
-    newListBorrow = &newList;
-    openTocLists.get(openTocLists.len() - 1).members.add(newList);
+    newListBorrow = newList;
+    openTocLists.get(openTocLists.len() - 1).members.add(^newList);
     openTocLists.add(newListBorrow);
   }
   while (header.level < openTocLists.len()) {
@@ -223,8 +270,8 @@ fn populateTableOfContents2(openTocLists &List<&UnorderedList>, header &Header i
       .members.add(
           ListItem(
               Link(
-                  header.text,
-                  ("#" + urlifyHeadingText(header.text)).slice())));
+                  getHeaderText(header).slice(),
+                  ("#" + urlifyHeadingText(header)).slice())));
 }
 fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &UnorderedList impl SectionMember) { }
 fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &Paragraph impl SectionMember) { }
@@ -255,7 +302,9 @@ fn printSection(p &PrintHelper, this &Section) {
 
 fn printSectionMember(p &PrintHelper, virtual this &SectionMember) abstract;
 fn printSectionMember(p &PrintHelper, this &Header impl SectionMember) {
-  p.out.println("""<h{this.level + 1} class="{p.ns("")}" id="{urlifyHeadingText(this.text)}">{this.text}</h{this.level + 1}>""");
+  p.out.println("""<h{this.level + 1} class="{p.ns("")}" id="{urlifyHeadingText(this)}">""");
+  printInlineNode(p, this.contents);
+  p.out.println("""</h{this.level + 1}>""");
 }
 fn printSectionMember(p &PrintHelper, this &UnorderedList impl SectionMember) {
   printList(p, this);
@@ -289,24 +338,23 @@ fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
   p.out.print("""
     <div class="{p.ns("c-snippet root {langClass}")}">
       <div class="{p.ns("c-snippet header")}">{this.language}</div>
-      <div class="{p.ns("c-snippet code")}">
-  """);
+      <div class="{p.ns("c-snippet code")}">""");
 
   codeHtml =
     if (this.language == "Vale" or this.language == "vale") {
-      writeStringToFile("/tmp/highlight.vale", this.code.trimnl().str());
+      writeStringToFile("/tmp/highlight.vale", this.code.str());
       output = executeProgram("java -cp " + p.valestromPath + " net.verdagon.vale.driver.Driver highlight /tmp/highlight.vale -oh /tmp/highlight.html");
       if (output != "") {
         panic("Highlighting failed:\n" + output);
       }
       = readFileAsString("/tmp/highlight.html").slice();
     } else {
-      = this.code.trimnl();
+      = this.code;
     };
   printWithChevronNotes(p, codeHtml);
 
-  p.out.println("""
-      </div>
+  p.out.println(
+   """</div>
     </div>
   """);
 }
@@ -358,6 +406,27 @@ fn printInlineNode(p &PrintHelper, this &Compound impl InlineNode) {
 
 
 
+
+fn collectTextNodes(textNodes &List<StrSlice>, virtual this &InlineNode) abstract;
+fn collectTextNodes(textNodes &List<StrSlice>, this &Text impl InlineNode) {
+  textNodes.add(this.text);
+}
+fn collectTextNodes(textNodes &List<StrSlice>, this &Compound impl InlineNode) {
+  this.inners.each({ collectTextNodes(textNodes, _) });
+}
+fn collectTextNodes(textNodes &List<StrSlice>, this &Bold impl InlineNode) {
+  collectTextNodes(textNodes, this.inner);
+}
+fn collectTextNodes(textNodes &List<StrSlice>, this &Italic impl InlineNode) {
+  collectTextNodes(textNodes, this.inner);
+}
+fn collectTextNodes(textNodes &List<StrSlice>, this &InlineCode impl InlineNode) { }
+fn collectTextNodes(textNodes &List<StrSlice>, this &Link impl InlineNode) { }
+fn collectTextNodes(textNodes &List<StrSlice>, this &NoteAnchor impl InlineNode) { }
+
+
+
+
 fn printList(p &PrintHelper, list &UnorderedList) {
   p.out.println("""<ul class="{p.ns("")}">""");
 
@@ -402,7 +471,7 @@ fn printNotes(notes &Notes, p &PrintHelper) {
         notes.noteContentsById.has(id),
         id + " not in notes?");
     noteContents =
-        notes.noteContentsById.get(id)^.get();
+        notes.noteContentsById.get(id).get();
 
     p.out.println("""<div id="note{id}" class="{p.ns("note")}" data-noteId="{id}">""");
     p.out.println("""<div class="{p.ns("note-starter note-color{id mod 6}")}">{id}</div>""");

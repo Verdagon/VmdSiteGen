@@ -54,7 +54,7 @@ impl SectionMember for Quote;
 
 struct Header {
   level int;
-  text StrSlice;
+  contents InlineNode;
 }
 impl SectionMember for Header;
 
@@ -93,6 +93,7 @@ struct Link {
   url StrSlice;
 }
 impl InlineNode for Link;
+fn copy(link &Link) Link { Link(link.text, link.url) }
 
 struct Italic { inner InlineNode; }
 impl InlineNode for Italic;
