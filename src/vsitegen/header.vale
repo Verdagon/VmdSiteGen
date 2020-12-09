@@ -17,13 +17,25 @@ fn blogHeader(small bool) str {
       """
     };
   links =
-    """
-      <div class="header links">
-        <a href="/">Home</a>
-        <a href="https:\/\/reddit.com/r/Vale">r/Vale</a>
-        <a href="https:\/\/discord.gg/SNB8yGH">Discord</a>
-      </div>
-    """;
+    if (small) {
+      """
+        <div class="header links">
+          <a href="/">Home</a>
+          <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
+          <a class="github" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
+        </div>
+      """
+    } else {
+      """
+        <div class="header links">
+          <a href="/download">Download</a>
+          <a href="/guide/introduction">Guide</a>
+          <a class="github" href="https:\/\/github.com/ValeLang/Vale">Github</a>
+          <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
+          <a class="discord" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
+        </div>
+      """
+    };
   ret
     """
       <div class="header root {if (small) {" small"} else {""}}">

@@ -30,7 +30,7 @@ fn wrapTocInSeriesList(page &Page, tocRootList UnorderedList) UnorderedList {
     link = page.metadata.seriesEntries.remove(0);
     vassert(link.text == "" and link.url == "", "wat zork");
     seriesList.members.add(ListItem(Bold(Text(slice(page.metadata.title + " *")))));
-    seriesList.members.add(^tocRootList);
+    seriesList.members.add(tocRootList);
 
     while (page.metadata.seriesEntries.len() > 0 and
         (page.metadata.seriesEntries.get(0).text != "" or
@@ -38,9 +38,9 @@ fn wrapTocInSeriesList(page &Page, tocRootList UnorderedList) UnorderedList {
       seriesList.members.add(ListItem(page.metadata.seriesEntries.remove(0)));
     }
 
-    ret ^seriesList;
+    ret seriesList;
   } else {
-    ret ^tocRootList;
+    ret tocRootList;
   }
 }
 
@@ -55,7 +55,7 @@ fn copySeriesNextLink(page &Page) Opt<Link> {
       mut seriesNextLink = Some(copy(link));
     }
   }
-  ret ^seriesNextLink;
+  ret seriesNextLink;
 }
 
 
@@ -67,13 +67,13 @@ fn printPage(output &Output, valestromPath str, page &Page) {
 
   // A stack of all the currently open lists.
   openTocLists = List<&UnorderedList>();
-  openTocLists.add(unSeriesdTocRootList);
-  page.members.each({ populateTableOfContents(openTocLists, _); });
-  drop(^openTocLists);
+  openTocLists.add(&unSeriesdTocRootList);
+  page.members.each({ populateTableOfContents(&openTocLists, _); });
+  drop(openTocLists);
 
-  tocRootList = wrapTocInSeriesList(page, ^unSeriesdTocRootList);
+  tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
 
-  p = PrintHelper(output, valestromPath, page.metadata, false, tocRootList);
+  p = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList);
 
 
   p.out.println("""
@@ -151,9 +151,9 @@ body {
           <div class="{p.ns("area-contents")}">
   """);
 
-  printHeader(p);
+  printHeader(&p);
 
-  page.members.each({ printPageMember(p, _); });
+  page.members.each({ printPageMember(&p, _); });
 
   // End the currently open area div
   p.out.println("""
@@ -171,10 +171,10 @@ body {
     inlines = List<InlineNode>();
     inlines.add(Bold(Text("Next: ".slice())));
     inlines.add(Link(link.text, link.url));
-    para = Paragraph(Compound(^inlines));
+    para = Paragraph(Compound(inlines));
     s = Section(List<SectionMember>());
-    s.members.add(^para);
-    printSection(p, s);
+    s.members.add(para);
+    printSection(&p, &s);
 
     p.out.println("""
             </div>
@@ -203,9 +203,9 @@ body {
 
 fn getHeaderText(header &Header) str {
   textNodes = List<StrSlice>();
-  collectTextNodes(textNodes, header.contents);
+  collectTextNodes(&textNodes, header.contents);
   source! = "";
-  each textNodes { mut source = source + _; }
+  each (&textNodes) { mut source = source + _; }
   ret source;
 }
 
@@ -258,8 +258,8 @@ fn populateTableOfContents2(openTocLists &List<&UnorderedList>, virtual this &Se
 fn populateTableOfContents2(openTocLists &List<&UnorderedList>, header &Header impl SectionMember) {
   while (header.level > openTocLists.len()) {
     newList = UnorderedList(List<ListMember>());
-    newListBorrow = newList;
-    openTocLists.get(openTocLists.len() - 1).members.add(^newList);
+    newListBorrow = &newList;
+    openTocLists.get(openTocLists.len() - 1).members.add(newList);
     openTocLists.add(newListBorrow);
   }
   while (header.level < openTocLists.len()) {
