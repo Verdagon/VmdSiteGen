@@ -3,14 +3,19 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <unistd.h>
 
 // These are exposed by the compiled vale .obj/.o, they're
 // the start of a Vale native API.
-typedef struct ValeStr ValeStr;
-ValeStr* vale_newstr(int64_t length);
-char* vale_getstrchars(ValeStr* str);
-int64_t vale_getstrnumbytes(ValeStr* str);
+typedef struct ValeStr {
+  uint64_t length;
+  char* chars;
+} ValeStr;
+extern ValeStr* ValeStrNew(int length);
+extern ValeStr* ValeStrFrom(char* source);
+
+#include "ExecuteProgramResult.h"
+#include "ExecuteProgramResultNew.h"
 
 
 // typedef struct TestStruct TestStruct;
@@ -34,10 +39,13 @@ typedef struct BufferListNode {
   char buffer[1024];
 } BufferListNode;
 
-ValeStr* executeProgram(ValeStr* commandVStr) {
-  char* command = vale_getstrchars(commandVStr);
+ExecuteProgramResultRef executeProgram(ValeStr* commandVStr) {
+  char* command = commandVStr->chars;
+
+  printf("Running program: %s\n", command);
 
   FILE* fp = popen(command, "r");
+  free(commandVStr);
   if (!fp) {
     fprintf(stderr, "popen failed on command: %s\n", command);
     exit(1);
@@ -69,8 +77,7 @@ ValeStr* executeProgram(ValeStr* commandVStr) {
   assert(feof(fp));
 
 
-  ValeStr* vstr = vale_newstr(totalChars);
-  char* vstrChars = vale_getstrchars(vstr);
+  ValeStr* vstr = ValeStrNew(totalChars);
 
   int i = totalChars;
   while (i > 0) {
@@ -83,14 +90,18 @@ ValeStr* executeProgram(ValeStr* commandVStr) {
     
     charPtrInBuffer--;
     i--;
-    vstrChars[i] = *charPtrInBuffer;
+    vstr->chars[i] = *charPtrInBuffer;
   }
 
   assert(head == first);
   assert(charPtrInBuffer == &first->buffer[0]);
   free(head);
 
-  fclose(fp);
+  int exitCode = pclose(fp);
 
-  return vstr;
+  return ExecuteProgramResultNew(exitCode, vstr, ValeStrFrom(""));
+}
+
+void threadSleep(int seconds) {
+  sleep(seconds);
 }

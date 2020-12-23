@@ -1,14 +1,29 @@
 
+struct ExecuteProgramResult export {
+  returnCode int;
+  stdout str;
+  stderr str;
+}
+fn ExecuteProgramResultNew(returnCode int, stdout str, stderr str)
+ExecuteProgramResult export {
+  ExecuteProgramResult(returnCode, stdout, stderr)
+}
 
-fn executeProgram(command str) str extern;
+fn executeProgram(command str) ExecuteProgramResult extern;
 
-// struct TestStruct {
-//   x int;
-//   s str;
-// }
-// fn newTestStruct(x int, s str) TestStruct export {
-//   TestStruct(x, s)
-// }
-// fn dropTestStruct(this TestStruct) void export { }
-// fn TestStruct_get_x(testStruct &TestStruct) int export { testStruct.x }
-// fn TestStruct_get_s(testStruct &TestStruct) str export { testStruct.s }
+
+fn replaceAll(haystack! StrSlice, needle StrSlice, replacement StrSlice) StrSlice {
+  result! = "";
+  while (true) {
+    maybeSplit = splitOnce(haystack, needle);
+    if (maybeSplit.isEmpty()) {
+      mut result = result + haystack;
+      ret result.slice();
+    }
+    (initial, rest) = maybeSplit^.get();
+    mut result = result + initial + replacement;
+    mut haystack = rest;
+  }
+  // unreachable
+  ret "".slice();
+}

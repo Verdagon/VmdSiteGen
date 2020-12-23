@@ -5,6 +5,7 @@ struct PrintHelper {
   metadata &Metadata;
   printedFirstNotes! bool;
   tableOfContents &UnorderedList;
+  codeSnippetsPrinted! int;
 }
 
 fn ns(p &PrintHelper, class str) str {
@@ -73,7 +74,7 @@ fn printPage(output &Output, valestromPath str, page &Page) {
 
   tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
 
-  p = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList);
+  p = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0);
 
 
   p.out.println("""
@@ -342,12 +343,19 @@ fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
 
   codeHtml =
     if (this.language == "Vale" or this.language == "vale") {
-      writeStringToFile("/tmp/highlight.vale", this.code.str());
-      output = executeProgram("java -cp " + p.valestromPath + " net.verdagon.vale.driver.Driver highlight /tmp/highlight.vale -oh /tmp/highlight.html");
-      if (output != "") {
-        panic("Highlighting failed:\n" + output);
+      println("Vale:");
+      println(this.code);
+      writeStringToFile("/tmp/highlight{p.codeSnippetsPrinted}.vale", this.code.str());
+      executeResult = executeProgram("java -cp {p.valestromPath} net.verdagon.vale.driver.Driver highlight /tmp/highlight{p.codeSnippetsPrinted}.vale -oh /tmp/highlight{p.codeSnippetsPrinted}.html");
+      if (executeResult.returnCode != 0) {
+        panic(
+            "Highlighting failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
       }
-      = readFileAsString("/tmp/highlight.html").slice();
+      s = readFileAsString("/tmp/highlight{p.codeSnippetsPrinted}.html").slice();
+      println("HTML:");
+      println(s);
+      mut p.codeSnippetsPrinted = p.codeSnippetsPrinted + 1;
+      = s;
     } else {
       = this.code;
     };
@@ -389,7 +397,11 @@ fn printInlineNode(p &PrintHelper, this &Text impl InlineNode) {
   p.out.print(this.text);
 }
 fn printInlineNode(p &PrintHelper, this &InlineCode impl InlineNode) {
-  p.out.print("""<span class="{p.ns("inline-code")}">{this.inner}</span>""");
+  p.out.print("""<span class="{p.ns("inline-code")}">""");
+  p.out.print(
+    this.inner.replaceAll("<".slice(), "&lt;".slice())
+      .replaceAll(">".slice(), "&gt;".slice()));
+  p.out.print("</span>");
 }
 fn printInlineNode(p &PrintHelper, this &Link impl InlineNode) {
   p.out.print("""<a class="{p.ns("")}" href="{this.url}">{this.text}</a>""");

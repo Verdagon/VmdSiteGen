@@ -1,7 +1,7 @@
 
 // fn doThing() int extern;
 
-fn main() {
+fn main() export {
   if (numMainArgs() < 4) {
     println("Usage: " + getMainArg(0) + " input.vmd output.html Valestrom.jar");
     ret void();
