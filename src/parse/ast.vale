@@ -19,17 +19,19 @@ struct Metadata {
   namespace StrSlice;
 }
 
+
 struct Section {
   members List<SectionMember>;
 }
 impl PageMember for Section;
 
 
-struct Notes {
+struct Slice {
   ids List<int>;
+  newColor StrSlice;
   noteContentsById HashMap<int, Section, IntHasher, IntEquator>;
 }
-impl PageMember for Notes;
+impl PageMember for Slice;
 
 
 
@@ -66,13 +68,16 @@ struct CodeSnippet {
 impl SectionMember for CodeSnippet;
 
 
-struct UnorderedList {
+// Named PolyList because can't call it list, and it's
+// either unordered or ordered list.
+struct PolyList {
+  ordered bool;
   members List<ListMember>;
 }
-impl SectionMember for UnorderedList;
+impl SectionMember for PolyList;
 
 interface ListMember {}
-impl ListMember for UnorderedList;
+impl ListMember for PolyList;
 
 struct ListItem {
   contents InlineNode;

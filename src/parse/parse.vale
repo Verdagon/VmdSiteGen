@@ -15,9 +15,9 @@ fn NotesCollector(nextId int) NotesCollector {
     HashMap<int, StrSlice, IntHasher, IntEquator>(IntHasher(), IntEquator()),
     HashMap<int, Section, IntHasher, IntEquator>(IntHasher(), IntEquator()))
 }
-fn Notes(notesCollector NotesCollector) Notes {
+fn Slice(newColor StrSlice, notesCollector NotesCollector) Slice {
   (nextId, ids, idByName, nameById, noteContentsById) = notesCollector;
-  ret Notes(ids, noteContentsById);
+  ret Slice(ids, newColor, noteContentsById);
 }
 
 
@@ -34,25 +34,26 @@ fn parse(filepath str) Page {
   while (iter.hasNext()) {
     iter.skipNewlines();
 
-    if (iter.skipIfNext("<notes/>") or iter.skipIfNext("<notes />")) {
-      pageMembers.add(Notes(mut notesCollector = NotesCollector(notesCollector.nextId)));
-    } else if (iter.nextIs("<notes>")) {
-      parseSeparateNotes(&notesCollector, &iter);
-      pageMembers.add(Notes(mut notesCollector = NotesCollector(notesCollector.nextId)));
+    if (iter.nextIs("<slice")) {
+      pageMembers.add(
+          parseSlice(
+              mut notesCollector = NotesCollector(notesCollector.nextId),
+              &iter));
     } else {
       section =
           parseSection(
               &notesCollector,
               &iter,
               &IFunction1<mut, &InputIter, bool>((iter){
-                ret iter.hasNext() and not iter.nextIs("<notes") and not iter.nextIs("\n\n\n");
+                ret iter.hasNext() and not iter.nextIs("<slice") and not iter.nextIs("\n\n\n");
               }));
       pageMembers.add(section);
     }
   }
 
   pageMembers.add(
-      Notes(
+      Slice(
+          "".slice(),
           mut notesCollector = NotesCollector(notesCollector.nextId)));
 
   ret Page(metadata, pageMembers);
@@ -119,11 +120,16 @@ fn parseMetadata(input &InputIter) Metadata {
 }
 
 
-fn nextIsListItem(originalIter &InputIter) bool {
+fn getListItemPrefix(ordered bool) str {
+  = if (ordered) { " 1. " } else { " * " }
+}
+
+
+fn nextIsListItem(originalIter &InputIter, ordered bool) bool {
   lookaheadIter = copy(originalIter);
   lookaheadIter.skipNewlines();
   while (lookaheadIter.skipIfNext("   ")) { }
-  ret lookaheadIter.nextIs(" * ");
+  ret lookaheadIter.nextIs(getListItemPrefix(ordered));
 }
 
 
@@ -131,22 +137,25 @@ fn parseList(
     notesCollector &NotesCollector,
     iter &InputIter,
     continueF &IFunction1<mut, &InputIter, bool>)
-UnorderedList {
-  rootList = UnorderedList(List<ListMember>());
+PolyList {
+  ordered = iter.nextIs(" 1. ");
+
+
+  rootList = PolyList(ordered, List<ListMember>());
   // A stack of all the currently open lists.
-  openLists = List<&UnorderedList>();
+  openLists = List<&PolyList>();
   openLists.add(&rootList);
 
-  while ((continueF)(iter) and iter.nextIsListItem()) {
+  while ((continueF)(iter) and iter.nextIsListItem(ordered)) {
     iter.skipNewlines();
     thisListItemIndentation! = 1;
     while (iter.skipIfNext("   ")) {
       mut thisListItemIndentation = thisListItemIndentation + 1;
     }
-    iter.skipExpect(" * ");
+    iter.skipExpect(getListItemPrefix(ordered));
 
     while (thisListItemIndentation > openLists.len()) {
-      newList = UnorderedList(List<ListMember>());
+      newList = PolyList(ordered, List<ListMember>());
       newListBorrow = &newList;
       openLists.get(openLists.len() - 1).members.add(newList);
       openLists.add(newListBorrow);
@@ -265,37 +274,55 @@ fn nextIsNoteBegin(originalIter &InputIter) bool {
 }
 
 
-fn parseSeparateNotes(
-    notesCollector &NotesCollector,
-    iter &InputIter) {
-  iter.skipExpect("<notes>");
-  iter.skipNewlines();
+fn parseSlice(
+    notesCollector NotesCollector,
+    iter &InputIter)
+Slice {
+  println("parsing slice");
+  iter.skipExpect("<slice");
 
-  continueF =
-      IFunction1<mut, &InputIter, bool>((iter){
-        if (not iter.hasNext()) {
-          panic("<notes> must end with </notes>");
-        }
-        ret not iter.nextIs("</notes>");
-      });
-
-  while ((continueF)(iter)) {
+  newColor! = "".slice();
+  if (iter.skipIfNext(" new-color=\"")) {
+    mut newColor = iter.getUntilExpected("\"");
+  }
+  if (iter.skipIfNext(">")) {
+    println("opening slice notes");
     iter.skipNewlines();
-    iter.skipExpect("#");
-    noteId = iter.getUntilExpected(":");
 
-    noteOutput =
-        parseSection(
-            &notesCollector,
-            &iter,
-            &IFunction1<mut, &InputIter, bool>((iter){
-              ret (continueF)(iter) and not iter.nextIsNoteBegin();
-            }));
-    iter.skipNewlines();
-    notesCollector.addSeparateNote(noteId, noteOutput);
+    continueF =
+        IFunction1<mut, &InputIter, bool>((iter){
+          if (not iter.hasNext()) {
+            panic("<slice> must end with </slice>");
+          }
+          ret not iter.nextIs("</slice>");
+        });
+
+    while ((continueF)(iter)) {
+      println("in iter");
+      iter.skipNewlines();
+      iter.skipExpect("#");
+      noteId = iter.getUntilExpected(":");
+
+      noteOutput =
+          parseSection(
+              &notesCollector,
+              &iter,
+              &IFunction1<mut, &InputIter, bool>((iter){
+                ret (continueF)(iter) and not iter.nextIsNoteBegin();
+              }));
+      iter.skipNewlines();
+      notesCollector.addSeparateNote(noteId, noteOutput);
+    }
+
+    iter.skipIfNext("</slice>");
+  } else if (iter.skipIfNext("/>") or iter.skipIfNext(" />")) {
+    // Do nothing
+  } else {
+    panic("<slice should end in > or />");
   }
 
-  iter.skipIfNext("</notes>");
+  println("done with slice");
+  ret Slice(newColor, notesCollector);
 }
 
 
@@ -391,10 +418,8 @@ Italic {
         if (not iter.hasNext()) {
           panic("Must end italic!");
           ret false;
-        } else if (iter.nextIs("_ ") or iter.nextIs("_.")) {
+        } else if (iter.nextIs("_")) {
           iter.skipExpect("_");
-          ret false;
-        } else if (iter.skipIfEndsWith("_")) {
           ret false;
         } else {
           ret true;
@@ -516,7 +541,7 @@ Section {
       sectionMembers.add(Header(headerStrength, headerContents));
     } else if (iter.nextIs("<<<<")) {
       sectionMembers.add(parseSplit(notesCollector, iter));
-    } else if (iter.nextIs(" * ")) {
+    } else if (iter.nextIs(" * ") or iter.nextIs(" 1. ")) {
       sectionMembers.add(
           parseList(
               &notesCollector,

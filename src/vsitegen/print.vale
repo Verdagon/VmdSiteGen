@@ -4,12 +4,16 @@ struct PrintHelper {
   valestromPath str;
   metadata &Metadata;
   printedFirstNotes! bool;
-  tableOfContents &UnorderedList;
+  tableOfContents &PolyList;
   codeSnippetsPrinted! int;
+  currentSlicesColor! StrSlice;
 }
 
-fn ns(p &PrintHelper, class str) str {
-  p.metadata.namespace + " " + class
+fn ns(ph &PrintHelper, class str) str {
+  ph.metadata.namespace + " " + class
+}
+fn ns(ph &PrintHelper, class StrSlice) str {
+  ph.metadata.namespace + " " + class
 }
 
 
@@ -17,9 +21,9 @@ struct TableOfContentsBuilder {
   headers List<&Header>;
 }
 
-fn wrapTocInSeriesList(page &Page, tocRootList UnorderedList) UnorderedList {
+fn wrapTocInSeriesList(page &Page, tocRootList PolyList) PolyList {
   if (page.metadata.seriesEntries.len() > 0) {
-    seriesList = UnorderedList(List<ListMember>());
+    seriesList = PolyList(false, List<ListMember>());
 
     while (page.metadata.seriesEntries.len() > 0 and
         (page.metadata.seriesEntries.get(0).text != "" or
@@ -64,20 +68,20 @@ fn printPage(output &Output, valestromPath str, page &Page) {
 
   seriesNextLink = copySeriesNextLink(page);
 
-  unSeriesdTocRootList = UnorderedList(List<ListMember>());
+  unSeriesdTocRootList = PolyList(false, List<ListMember>());
 
   // A stack of all the currently open lists.
-  openTocLists = List<&UnorderedList>();
+  openTocLists = List<&PolyList>();
   openTocLists.add(&unSeriesdTocRootList);
   page.members.each({ populateTableOfContents(&openTocLists, _); });
   drop(openTocLists);
 
   tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
 
-  p = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0);
+  ph = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0, "".slice());
 
 
-  p.out.println("""
+  ph.out.println("""
 <!DOCTYPE html>
 <html>
 <head>
@@ -96,6 +100,7 @@ body {
 <link rel="stylesheet" type="text/css" href="/components/Footer.css"/>
 <link rel="stylesheet" type="text/css" href="/components/Snippet.css"/>
 <link rel="stylesheet" type="text/css" href="/components/Annotated.css"/>
+<link rel="stylesheet" type="text/css" href="/split.css"/>
 <link rel="stylesheet" type="text/css" href="/common.css"/>
 <link href="https:\/\/fonts.googleapis.com/css?family=Lato|Roboto|Roboto+Mono" rel="stylesheet">
 
@@ -106,7 +111,7 @@ body {
  src="https:\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/languages/go.min.js"></script>
 
 <!-- The core Firebase JS SDK is always required and must be listed first -->
-<script src="https:\/\/www.gstatic.com/firebasejs/7.16.1/firebase-app.js"></script>
+<script src="https:\/\/www.gstatic.com/firebasejs/7.16.1/firebase-apph.js"></script>
 
 <!-- TODO: Add SDKs for Firebase products that you want to use
      https:\/\/firebase.google.com/docs/web/setup#available-libraries -->
@@ -116,7 +121,7 @@ body {
   \/\/ Your web app's Firebase configuration
   var firebaseConfig = {
     apiKey: " AIzaSyBGXQQdJQJ_KkEz8mz1HSia3CMBXqmpKk0 ",
-    authDomain: "valesite.firebaseapp.com",
+    authDomain: "valesite.firebaseapph.com",
     databaseURL: "https:\/\/valesite.firebaseio.com",
     projectId: "valesite",
     storageBucket: "valesite.appspot.com",
@@ -131,41 +136,41 @@ body {
 
 </head>
 <body>
-  {blogHeader(p.metadata.realm == "blog")}
+  {blogHeader(ph.metadata.realm == "blog")}
 
-  <div class="{p.ns("page {page.metadata.layout} isomargined")}">
+  <div class="{ph.ns("page {page.metadata.layout} isomargined")}">
   """);
 
   if (page.metadata.layout == "annotated") {
-    p.out.println("""
-    <div class="{p.ns("columns")}">
-      <div class="{p.ns("page-left")}">
+    ph.out.println("""
+    <div class="{ph.ns("columns")}">
+      <div class="{ph.ns("page-left")}">
     """);
   }
 
 
-  // This is the first area div, we occasionally printPageMember
+  // This is the first slice div, we occasionally printPageMember
   // will close it, add some notes, and open a new one.
-  // Also print out the title and stuff in the first area.
-  p.out.println("""
-        <div class="{p.ns("area")}">
-          <div class="{p.ns("area-contents")}">
+  // Also print out the title and stuff in the first slice.
+  ph.out.println("""
+        <div class="{ph.ns("slice")}">
+          <div class="{ph.ns("slice-contents {ph.currentSlicesColor}")}">
   """);
 
-  printHeader(&p);
+  printHeader(&ph);
 
-  page.members.each({ printPageMember(&p, _); });
+  page.members.each({ printPageMember(&ph, _); });
 
-  // End the currently open area div
-  p.out.println("""
+  // End the currently open slice div
+  ph.out.println("""
           </div>
         </div>
   """);
 
   if (not seriesNextLink.isEmpty()) {
-    p.out.println("""
-        <div class="{p.ns("area")}">
-          <div class="{p.ns("area-contents")}">
+    ph.out.println("""
+        <div class="{ph.ns("slice")}">
+          <div class="{ph.ns("slice-contents {ph.currentSlicesColor}")}">
     """);
 
     link = seriesNextLink.get();
@@ -175,24 +180,24 @@ body {
     para = Paragraph(Compound(inlines));
     s = Section(List<SectionMember>());
     s.members.add(para);
-    printSection(&p, &s);
+    printSection(&ph, &s);
 
-    p.out.println("""
+    ph.out.println("""
             </div>
           </div>
     """);
   }
 
   if (page.metadata.layout == "annotated") {
-    p.out.println("""
+    ph.out.println("""
       </div>
-      <div class="{p.ns("page-right")}">
+      <div class="{ph.ns("page-right")}">
       </div>
     </div>
     """);
   }
 
-  p.out.println("""
+  ph.out.println("""
   </div>
 
   {blogFooter()} 
@@ -202,16 +207,20 @@ body {
   """);
 }
 
-fn getHeaderText(header &Header) str {
+fn getText(inlineNode &InlineNode) str {
   textNodes = List<StrSlice>();
-  collectTextNodes(&textNodes, header.contents);
+  collectTextNodes(&textNodes, inlineNode);
   source! = "";
   each (&textNodes) { mut source = source + _; }
   ret source;
 }
 
+fn getHeaderText(header &Header) str {
+  ret getText(header.contents);
+}
+
 fn urlifyHeadingText(header &Header) str {
-  source! = getHeaderText(header).slice();
+  source! = getHeaderText(header).trim();
 
   result! = "";
   while (source.len() > 0) {
@@ -230,35 +239,36 @@ fn urlifyHeadingText(header &Header) str {
   ret result;
 }
 
-fn printHeader(p &PrintHelper) {
-  p.out.println("""
-        <div class="{p.ns("metadata")}">
-          <h1 class="{p.ns("noline cozy")}" style="margin-top: 8px">{p.metadata.title}</h1>
-  """);
-
-  if (p.metadata.subtitle != "") {
-    p.out.println("""<div class="{p.ns("subtitle content cozy")}">{p.metadata.subtitle}</div>""");
-  }
-  if (p.metadata.date != "" or p.metadata.author != "") {
-    p.out.println("""
-            <div class="{p.ns("content")}"><span class="{p.ns("date")}">{p.metadata.date}</span> <span class="{p.ns("author")}">&nbsp;&mdash;&nbsp; {p.metadata.author}</span></div>
+fn printHeader(ph &PrintHelper) {
+  if (ph.metadata.realm != "home") {
+    ph.out.println("""
+          <div class="{ph.ns("metadata")}">
+            <h1 class="{ph.ns("noline cozy")}" style="margin-top: 8px">{ph.metadata.title}</h1>
     """);
-  }
-  p.out.println("""</div>""");
 
+    if (ph.metadata.subtitle != "") {
+      ph.out.println("""<div class="{ph.ns("subtitle content cozy")}">{ph.metadata.subtitle}</div>""");
+    }
+    if (ph.metadata.date != "" or ph.metadata.author != "") {
+      ph.out.println("""
+              <div class="{ph.ns("content")}"><span class="{ph.ns("date")}">{ph.metadata.date}</span> <span class="{ph.ns("author")}">&nbsp;&mdash;&nbsp; {ph.metadata.author}</span></div>
+      """);
+    }
+    ph.out.println("""</div>""");
+  }
 }
 
 
-fn populateTableOfContents(openTocLists &List<&UnorderedList>, virtual this &PageMember) abstract;
-fn populateTableOfContents(openTocLists &List<&UnorderedList>, this &Notes impl PageMember) { }
-fn populateTableOfContents(openTocLists &List<&UnorderedList>, this &Section impl PageMember) {
+fn populateTableOfContents(openTocLists &List<&PolyList>, virtual this &PageMember) abstract;
+fn populateTableOfContents(openTocLists &List<&PolyList>, this &Slice impl PageMember) { }
+fn populateTableOfContents(openTocLists &List<&PolyList>, this &Section impl PageMember) {
   this.members.each({ populateTableOfContents2(openTocLists, _); });
 }
 
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, virtual this &SectionMember) abstract;
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, header &Header impl SectionMember) {
+fn populateTableOfContents2(openTocLists &List<&PolyList>, virtual this &SectionMember) abstract;
+fn populateTableOfContents2(openTocLists &List<&PolyList>, header &Header impl SectionMember) {
   while (header.level > openTocLists.len()) {
-    newList = UnorderedList(List<ListMember>());
+    newList = PolyList(false, List<ListMember>());
     newListBorrow = &newList;
     openTocLists.get(openTocLists.len() - 1).members.add(newList);
     openTocLists.add(newListBorrow);
@@ -274,146 +284,149 @@ fn populateTableOfContents2(openTocLists &List<&UnorderedList>, header &Header i
                   getHeaderText(header).slice(),
                   ("#" + urlifyHeadingText(header)).slice())));
 }
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &UnorderedList impl SectionMember) { }
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &Paragraph impl SectionMember) { }
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &Split impl SectionMember) { }
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &CodeSnippet impl SectionMember) { }
-fn populateTableOfContents2(openTocLists &List<&UnorderedList>, this &Quote impl SectionMember) { }
+fn populateTableOfContents2(openTocLists &List<&PolyList>, this &PolyList impl SectionMember) { }
+fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Paragraph impl SectionMember) { }
+fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Split impl SectionMember) { }
+fn populateTableOfContents2(openTocLists &List<&PolyList>, this &CodeSnippet impl SectionMember) { }
+fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Quote impl SectionMember) { }
 
 
 
 
 
 
-fn printPageMember(p &PrintHelper, virtual this &PageMember) abstract;
-fn printPageMember(p &PrintHelper, this &Notes impl PageMember) {
-  printNotes(this, p);
+fn printPageMember(ph &PrintHelper, virtual this &PageMember) abstract;
+fn printPageMember(ph &PrintHelper, this &Slice impl PageMember) {
+  printSlice(this, ph);
 }
-fn printPageMember(p &PrintHelper, this &Section impl PageMember) {
-  printSection(p, this);
+fn printPageMember(ph &PrintHelper, this &Section impl PageMember) {
+  printSection(ph, this);
 }
-fn printSection(p &PrintHelper, this &Section) {
-  p.out.println("""<section class="{p.ns("")}">""");
+fn printSection(ph &PrintHelper, this &Section) {
+  ph.out.println("""<section class="{ph.ns("")}">""");
 
-  this.members.each({ printSectionMember(p, _) });
+  this.members.each({ printSectionMember(ph, _) });
 
-  p.out.println("");
-  p.out.println("</section>");
+  ph.out.println("");
+  ph.out.println("</section>");
 }
 
-fn printSectionMember(p &PrintHelper, virtual this &SectionMember) abstract;
-fn printSectionMember(p &PrintHelper, this &Header impl SectionMember) {
-  p.out.println("""<h{this.level + 1} class="{p.ns("")}" id="{urlifyHeadingText(this)}">""");
-  printInlineNode(p, this.contents);
-  p.out.println("""</h{this.level + 1}>""");
+fn printSectionMember(ph &PrintHelper, virtual this &SectionMember) abstract;
+fn printSectionMember(ph &PrintHelper, this &Header impl SectionMember) {
+  ph.out.println("""<h{this.level + 1} class="{ph.ns("")}" id="{urlifyHeadingText(this)}">""");
+  printInlineNode(ph, this.contents);
+  println("Printing header: " + getHeaderText(this));
+  ph.out.println("""</h{this.level + 1}>""");
 }
-fn printSectionMember(p &PrintHelper, this &UnorderedList impl SectionMember) {
-  printList(p, this);
+fn printSectionMember(ph &PrintHelper, this &PolyList impl SectionMember) {
+  printList(ph, this);
 }
-fn printSectionMember(p &PrintHelper, this &Paragraph impl SectionMember) {
-  p.out.println("""<p class="{p.ns("")}">""");
-  printInlineNode(p, this.contents);
-  p.out.println("");
-  p.out.println("</p>");
+fn printSectionMember(ph &PrintHelper, this &Paragraph impl SectionMember) {
+  ph.out.println("""<p class="{ph.ns("")}">""");
+  printInlineNode(ph, this.contents);
+  ph.out.println("");
+  ph.out.println("</p>");
 }
-fn printSectionMember(p &PrintHelper, this &Split impl SectionMember) {
-  p.out.println("""<div class="{p.ns("split")}">""");
-  p.out.println("""<div class="{p.ns("split-left")}">""");
-  this.left.each({ printSection(p, _); });
-  p.out.println("""</div>""");
-  p.out.println("""<div class="{p.ns("split-right")}">""");
-  this.right.each({ printSection(p, _); });
-  p.out.println("""</div>""");
-  p.out.println("""</div>""");
+fn printSectionMember(ph &PrintHelper, this &Split impl SectionMember) {
+  ph.out.println("""<div class="{ph.ns("split")}">""");
+  ph.out.println("""<div class="{ph.ns("split-left")}">""");
+  this.left.each({ printSection(ph, _); });
+  ph.out.println("""</div>""");
+  ph.out.println("""<div class="{ph.ns("split-right")}">""");
+  this.right.each({ printSection(ph, _); });
+  ph.out.println("""</div>""");
+  ph.out.println("""</div>""");
 }
-fn printSectionMember(p &PrintHelper, this &Quote impl SectionMember) {
-  p.out.println("""<div class="{p.ns("quote")}">""");
-  printInlineNode(p, this.contents);
-  p.out.println("");
-  p.out.println("</div>");
+fn printSectionMember(ph &PrintHelper, this &Quote impl SectionMember) {
+  ph.out.println("""<div class="{ph.ns("quote")}">""");
+  printInlineNode(ph, this.contents);
+  ph.out.println("");
+  ph.out.println("</div>");
 }
-fn printSectionMember(p &PrintHelper, this &CodeSnippet impl SectionMember) {
+fn printSectionMember(ph &PrintHelper, this &CodeSnippet impl SectionMember) {
 
   langClass = if (this.language.len() > 0) { "language-" + this.language } else { "" };
 
-  p.out.print("""
-    <div class="{p.ns("c-snippet root {langClass}")}">
-      <div class="{p.ns("c-snippet header")}">{this.language}</div>
-      <div class="{p.ns("c-snippet code")}">""");
+  ph.out.print("""
+    <div class="{ph.ns("c-snippet root {langClass}")}">
+      <div class="{ph.ns("c-snippet header")}">{this.language}</div>
+      <div class="{ph.ns("c-snippet code")}">""");
 
   codeHtml =
     if (this.language == "Vale" or this.language == "vale") {
       println("Vale:");
       println(this.code);
-      writeStringToFile("/tmp/highlight{p.codeSnippetsPrinted}.vale", this.code.str());
-      executeResult = executeProgram("java -cp {p.valestromPath} net.verdagon.vale.driver.Driver highlight /tmp/highlight{p.codeSnippetsPrinted}.vale -oh /tmp/highlight{p.codeSnippetsPrinted}.html");
+      writeStringToFile("/tmp/highlight{ph.codeSnippetsPrinted}.vale", this.code.str());
+      executeResult = executeProgram("java -cp {ph.valestromPath} net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale -oh /tmp/highlight{ph.codeSnippetsPrinted}.html");
       if (executeResult.returnCode != 0) {
         panic(
             "Highlighting failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
       }
-      s = readFileAsString("/tmp/highlight{p.codeSnippetsPrinted}.html").slice();
+      s = readFileAsString("/tmp/highlight{ph.codeSnippetsPrinted}.html").slice();
       println("HTML:");
       println(s);
-      mut p.codeSnippetsPrinted = p.codeSnippetsPrinted + 1;
+      mut ph.codeSnippetsPrinted = ph.codeSnippetsPrinted + 1;
       = s;
     } else {
-      = this.code;
+      = this.code
+          .replaceAll("<".slice(), "&lt;".slice())
+          .replaceAll(">".slice(), "&gt;".slice());
     };
-  printWithChevronNotes(p, codeHtml);
+  printWithChevronNotes(ph, codeHtml);
 
-  p.out.println(
+  ph.out.println(
    """</div>
     </div>
   """);
 }
 
-fn printWithChevronNotes(p &PrintHelper, s StrSlice) {
+fn printWithChevronNotes(ph &PrintHelper, s StrSlice) {
   iter = InputIter(s, true);
   while (iter.hasNext()) {
     if (iter.skipIfNext("«")) {
       // Parser should have replaced the name with an id, like «mynote» to «13».
       noteIdStr = iter.getUntilExpected("»");
       noteId = noteIdStr.int().get();
-      printNoteAnchor(p, &NoteAnchor(noteId));
+      printNoteAnchor(ph, &NoteAnchor(noteId));
     } else {
-      p.out.print(iter.getNext());
+      ph.out.print(iter.getNext());
     }
   }
 }
 
 
-fn printInlineNode(p &PrintHelper, virtual this &InlineNode) abstract;
-fn printInlineNode(p &PrintHelper, this &Bold impl InlineNode) {
-  p.out.print("<b>");
-  printInlineNode(p, this.inner);
-  p.out.print("</b>");
+fn printInlineNode(ph &PrintHelper, virtual this &InlineNode) abstract;
+fn printInlineNode(ph &PrintHelper, this &Bold impl InlineNode) {
+  ph.out.print("<b>");
+  printInlineNode(ph, this.inner);
+  ph.out.print("</b>");
 }
-fn printInlineNode(p &PrintHelper, this &Italic impl InlineNode) {
-  p.out.print("<i>");
-  printInlineNode(p, this.inner);
-  p.out.print("</i>");
+fn printInlineNode(ph &PrintHelper, this &Italic impl InlineNode) {
+  ph.out.print("<i>");
+  printInlineNode(ph, this.inner);
+  ph.out.print("</i>");
 }
-fn printInlineNode(p &PrintHelper, this &Text impl InlineNode) {
-  p.out.print(this.text);
+fn printInlineNode(ph &PrintHelper, this &Text impl InlineNode) {
+  ph.out.print(this.text);
 }
-fn printInlineNode(p &PrintHelper, this &InlineCode impl InlineNode) {
-  p.out.print("""<span class="{p.ns("inline-code")}">""");
-  p.out.print(
+fn printInlineNode(ph &PrintHelper, this &InlineCode impl InlineNode) {
+  ph.out.print("""<span class="{ph.ns("inline-code")}">""");
+  ph.out.print(
     this.inner.replaceAll("<".slice(), "&lt;".slice())
       .replaceAll(">".slice(), "&gt;".slice()));
-  p.out.print("</span>");
+  ph.out.print("</span>");
 }
-fn printInlineNode(p &PrintHelper, this &Link impl InlineNode) {
-  p.out.print("""<a class="{p.ns("")}" href="{this.url}">{this.text}</a>""");
+fn printInlineNode(ph &PrintHelper, this &Link impl InlineNode) {
+  ph.out.print("""<a class="{ph.ns("")}" href="{this.url}">{this.text}</a>""");
 }
-fn printInlineNode(p &PrintHelper, this &NoteAnchor impl InlineNode) {
-  printNoteAnchor(p, this);
+fn printInlineNode(ph &PrintHelper, this &NoteAnchor impl InlineNode) {
+  printNoteAnchor(ph, this);
 }
-fn printNoteAnchor(p &PrintHelper, this &NoteAnchor) {
-  p.out.print("""<a class="{p.ns("note-anchor note-color{this.id mod 6}")}" href="#note{this.id}" data-noteId="{this.id}">{this.id}</a>""");
+fn printNoteAnchor(ph &PrintHelper, this &NoteAnchor) {
+  ph.out.print("""<a class="{ph.ns("note-anchor note-color{this.id mod 6}")}" href="#note{this.id}" data-noteId="{this.id}">{this.id}</a>""");
 }
-fn printInlineNode(p &PrintHelper, this &Compound impl InlineNode) {
-  this.inners.each({ printInlineNode(p, _) });
+fn printInlineNode(ph &PrintHelper, this &Compound impl InlineNode) {
+  this.inners.each({ printInlineNode(ph, _) });
 }
 
 
@@ -439,66 +452,79 @@ fn collectTextNodes(textNodes &List<StrSlice>, this &NoteAnchor impl InlineNode)
 
 
 
-fn printList(p &PrintHelper, list &UnorderedList) {
-  p.out.println("""<ul class="{p.ns("")}">""");
+fn printList(ph &PrintHelper, list &PolyList) {
+  if (list.ordered) {
+    ph.out.println("""<ol class="{ph.ns("")}">""");
+  } else {
+    ph.out.println("""<ul class="{ph.ns("")}">""");
+  }
 
-  list.members.each({ printListMember(p, _); });
+  list.members.each({ printListMember(ph, _); });
 
-  p.out.println("</ul>");
+  if (list.ordered) {
+    ph.out.println("</ol>");
+  } else {
+    ph.out.println("</ul>");
+  }
 }
-fn printListMember(p &PrintHelper, virtual this &ListMember) abstract;
-fn printListMember(p &PrintHelper, this &UnorderedList impl ListMember) {
-  printList(p, this);
+fn printListMember(ph &PrintHelper, virtual this &ListMember) abstract;
+fn printListMember(ph &PrintHelper, this &PolyList impl ListMember) {
+  printList(ph, this);
 }
-fn printListMember(p &PrintHelper, this &ListItem impl ListMember) {
-  p.out.println("""<li class="{p.ns("")}">""");
-  printInlineNode(p, this.contents);
-  p.out.println("");
-  p.out.println("</li>");
+fn printListMember(ph &PrintHelper, this &ListItem impl ListMember) {
+  ph.out.println("""<li class="{ph.ns("")}">""");
+  printInlineNode(ph, this.contents);
+  ph.out.println("");
+  ph.out.println("</li>");
 }
 
 
 
-fn printNotes(notes &Notes, p &PrintHelper) {
-  // End the contents div in the current area
-  p.out.println("""
+fn printSlice(this &Slice, ph &PrintHelper) {
+  // End the contents div in the current slice
+  ph.out.println("""
       </div>
   """);
-  p.out.println("""<div class="{p.ns("area-notes")}">""");
+  ph.out.println("""<div class="{ph.ns("slice-notes")}">""");
 
-  if (p.metadata.layout == "annotated" and not p.printedFirstNotes) {
-    p.out.println("""
-      <div class="{p.ns("c-toc root")}">
-      {if (p.metadata.seriesName != "") { p.metadata.seriesName } else { "<b>{p.metadata.title}</b>".slice() }}
+  if (ph.metadata.layout == "annotated" and not ph.printedFirstNotes) {
+    ph.out.println("""
+      <div class="{ph.ns("c-toc root")}">
+      {if (ph.metadata.seriesName != "") { ph.metadata.seriesName } else { "<b>{ph.metadata.title}</b>".slice() }}
     """);
-    printList(p, p.tableOfContents);
-    p.out.println("""
+    printList(ph, ph.tableOfContents);
+    ph.out.println("""
       </div>
-      <div class="{p.ns("notes-header")}"><div>Notes</div></div>
+      <div class="{ph.ns("notes-header")}"><div>Notes</div></div>
     """);
   }
 
-  notes.ids.each((id){
+  this.ids.each((id){
     vassert(
-        notes.noteContentsById.has(id),
+        this.noteContentsById.has(id),
         id + " not in notes?");
     noteContents =
-        notes.noteContentsById.get(id).get();
+        this.noteContentsById.get(id).get();
 
-    p.out.println("""<div id="note{id}" class="{p.ns("note")}" data-noteId="{id}">""");
-    p.out.println("""<div class="{p.ns("note-starter note-color{id mod 6}")}">{id}</div>""");
-    printSection(p, noteContents);
-    p.out.println("</div>");
+    ph.out.println("""<div id="note{id}" class="{ph.ns("note")}" data-noteId="{id}">""");
+    ph.out.println("""<div class="{ph.ns("note-starter note-color{id mod 6}")}">{id}</div>""");
+    printSection(ph, noteContents);
+    ph.out.println("</div>");
   });
 
-  p.out.println("</div>");
+  ph.out.println("</div>");
 
-  // End the current area div, start a new one and start up a contents div
-  p.out.println("""
+  if (this.newColor != "") {
+    mut ph.currentSlicesColor = this.newColor;
+  }
+
+  println("making new slice, " + ph.currentSlicesColor);
+  // End the current slice div, start a new one and start up a contents div
+  ph.out.println("""
     </div>
-    <div class="{p.ns("area")}">
-      <div class="{p.ns("area-contents")}">
+    <div class="{ph.ns("slice")}">
+      <div class="{ph.ns("slice-contents {ph.currentSlicesColor}")}">
   """);
 
-  mut p.printedFirstNotes = true;
+  mut ph.printedFirstNotes = true;
 }
