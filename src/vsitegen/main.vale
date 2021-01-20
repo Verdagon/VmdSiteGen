@@ -2,19 +2,41 @@
 // fn doThing() int extern;
 
 fn main() export {
-  if (numMainArgs() < 4) {
-    println("Usage: " + getMainArg(0) + " input.vmd output.html Valestrom.jar");
+  if (numMainArgs() < 2) {
+    println("Usage: " + getMainArg(0) + " [build|testvale]");
     ret void();
   }
 
-  inFilepath = getMainArg(1);
-  outFilepath = getMainArg(2);
-  valestromPath = getMainArg(3);
+  if (getMainArg(1) == "build") {
+    if (numMainArgs() < 5) {
+      println("Usage: " + getMainArg(0) + " build input.vmd output.html Valestrom.jar");
+      ret void();
+    }
 
-  page = parse(inFilepath);
+    valestromPath = getMainArg(2);
+    inFilepath = getMainArg(3);
+    outFilepath = getMainArg(4);
 
-  output = Output();
-  printPage(&output, valestromPath, &page);
+    page = parse(inFilepath);
 
-  writeStringToFile(outFilepath, output.assembleStr());
+    output = Output();
+    printPage(&output, valestromPath, &page);
+
+    writeStringToFile(outFilepath, output.assembleStr());
+  } else if (getMainArg(1) == "testvale") {
+
+    if (numMainArgs() < 4) {
+      println("Usage: " + getMainArg(0) + " testvale input.vmd Valestrom.jar");
+      ret void();
+    }
+
+    valestromPath = getMainArg(2);
+    inFilepath = getMainArg(3);
+
+    page = parse(inFilepath);
+
+    testPage(valestromPath, &page);
+  } else {
+    println("Unknown mode: " + getMainArg(0));
+  }
 }

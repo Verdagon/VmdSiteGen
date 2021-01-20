@@ -6,6 +6,7 @@ struct PrintHelper {
   printedFirstNotes! bool;
   tableOfContents &PolyList;
   codeSnippetsPrinted! int;
+  slicesPrinted! int;
   currentSlicesColor! StrSlice;
 }
 
@@ -23,7 +24,7 @@ struct TableOfContentsBuilder {
 
 fn wrapTocInSeriesList(page &Page, tocRootList PolyList) PolyList {
   if (page.metadata.seriesEntries.len() > 0) {
-    seriesList = PolyList(false, List<ListMember>());
+    seriesList = PolyList("bullet", List<ListMember>());
 
     while (page.metadata.seriesEntries.len() > 0 and
         (page.metadata.seriesEntries.get(0).text != "" or
@@ -68,7 +69,7 @@ fn printPage(output &Output, valestromPath str, page &Page) {
 
   seriesNextLink = copySeriesNextLink(page);
 
-  unSeriesdTocRootList = PolyList(false, List<ListMember>());
+  unSeriesdTocRootList = PolyList("bullet", List<ListMember>());
 
   // A stack of all the currently open lists.
   openTocLists = List<&PolyList>();
@@ -78,8 +79,12 @@ fn printPage(output &Output, valestromPath str, page &Page) {
 
   tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
 
-  ph = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0, "".slice());
+  ph = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0, 0, "".slice());
 
+  csss =
+      page.metadata.cssFiles.map({
+        """<link rel="stylesheet" type="text/css" href="{_}"/>"""
+      }).join();
 
   ph.out.println("""
 <!DOCTYPE html>
@@ -89,19 +94,39 @@ fn printPage(output &Output, valestromPath str, page &Page) {
 <meta content="utf-8" http-equiv="encoding">
 <style type="text/css">
 body {
-  font-family: 'Lato', Roboto, Tahoma, Arial;
+  font-family: 'Lato', Roboto, Verdana, Tahoma, Arial;
   font-size: 12pt;
   margin: 0;
 }
 </style>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>{page.metadata.title}</title>
-<link rel="stylesheet" type="text/css" href="/components/Header.css"/>
-<link rel="stylesheet" type="text/css" href="/components/Footer.css"/>
-<link rel="stylesheet" type="text/css" href="/components/Snippet.css"/>
-<link rel="stylesheet" type="text/css" href="/components/Annotated.css"/>
-<link rel="stylesheet" type="text/css" href="/split.css"/>
 <link rel="stylesheet" type="text/css" href="/common.css"/>
+<link rel="stylesheet" type="text/css" media="screen and (max-width: 624px)" href="/common-thin.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 625px) and (max-width: 928px)" href="/common-normal.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 929px)" href="/common-wide.css">
+
+<link rel="stylesheet" type="text/css" href="/split.css"/>
+<link rel="stylesheet" type="text/css" media="screen and (max-width: 624px)" href="/split-thin.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 625px) and (max-width: 928px)" href="/split-normal.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 929px)" href="/split-wide.css">
+
+<link rel="stylesheet" type="text/css" href="/components/header.css"/>
+<link rel="stylesheet" type="text/css" media="screen and (max-width: 624px)" href="/components/header-thin.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 625px) and (max-width: 928px)" href="/components/header-normal.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 929px)" href="/components/header-wide.css">
+
+<link rel="stylesheet" type="text/css" href="/components/annotated.css"/>
+<link rel="stylesheet" type="text/css" media="screen and (max-width: 624px)" href="/components/annotated-thin.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 625px) and (max-width: 928px)" href="/components/annotated-normal.css">
+<link rel="stylesheet" type="text/css" media="screen and (min-width: 929px)" href="/components/annotated-wide.css">
+
+<link rel="stylesheet" type="text/css" href="/components/footer.css"/>
+<link rel="stylesheet" type="text/css" href="/components/snippet.css"/>
+<link rel="stylesheet" type="text/css" href="/split.css"/>
+
+{csss}
+
 <link href="https:\/\/fonts.googleapis.com/css?family=Lato|Roboto|Roboto+Mono" rel="stylesheet">
 
 <link rel="stylesheet" href="\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/agate.min.css">
@@ -111,23 +136,24 @@ body {
  src="https:\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/languages/go.min.js"></script>
 
 <!-- The core Firebase JS SDK is always required and must be listed first -->
-<script src="https:\/\/www.gstatic.com/firebasejs/7.16.1/firebase-apph.js"></script>
+<script src="https:\/\/www.gstatic.com/firebasejs/8.2.2/firebase-app.js"></script>
 
 <!-- TODO: Add SDKs for Firebase products that you want to use
      https:\/\/firebase.google.com/docs/web/setup#available-libraries -->
-<script src="https:\/\/www.gstatic.com/firebasejs/7.16.1/firebase-analytics.js"></script>
+<script src="https:\/\/www.gstatic.com/firebasejs/8.2.2/firebase-analytics.js"></script>
 
 <script>
   \/\/ Your web app's Firebase configuration
+  \/\/ For Firebase JS SDK v7.20.0 and later, measurementId is optional
   var firebaseConfig = {
-    apiKey: " AIzaSyBGXQQdJQJ_KkEz8mz1HSia3CMBXqmpKk0 ",
-    authDomain: "valesite.firebaseapph.com",
+    apiKey: "AIzaSyByxbRMJbQRwg0Tr2JC6qyi_mEH8GMuoOs",
+    authDomain: "valesite.firebaseapp.com",
     databaseURL: "https:\/\/valesite.firebaseio.com",
     projectId: "valesite",
     storageBucket: "valesite.appspot.com",
     messagingSenderId: "670338061455",
-    appId: "1:670338061455:web:cfbb4a2f69f9bd7a83ccfa",
-    measurementId: "G-G3JH78EBKK"
+    appId: "1:670338061455:web:3a1126dfcecf9b9e83ccfa",
+    measurementId: "G-BLG71TRWES"
   };
   \/\/ Initialize Firebase
   firebase.initializeApp(firebaseConfig);
@@ -138,23 +164,16 @@ body {
 <body>
   {blogHeader(ph.metadata.realm == "blog")}
 
-  <div class="{ph.ns("page {page.metadata.layout} isomargined")}">
+  <div class="{ph.ns("page {page.metadata.layout} nojs")}">
+    <div class="{ph.ns("page-inner")}">
   """);
-
-  if (page.metadata.layout == "annotated") {
-    ph.out.println("""
-    <div class="{ph.ns("columns")}">
-      <div class="{ph.ns("page-left")}">
-    """);
-  }
-
 
   // This is the first slice div, we occasionally printPageMember
   // will close it, add some notes, and open a new one.
   // Also print out the title and stuff in the first slice.
   ph.out.println("""
-        <div class="{ph.ns("slice")}">
-          <div class="{ph.ns("slice-contents {ph.currentSlicesColor}")}">
+        <div class="{ph.ns("slice {ph.currentSlicesColor}")}">
+          <div class="{ph.ns("slice-contents")}">
   """);
 
   printHeader(&ph);
@@ -166,11 +185,12 @@ body {
           </div>
         </div>
   """);
+  mut ph.slicesPrinted = ph.slicesPrinted + 1;
 
   if (not seriesNextLink.isEmpty()) {
     ph.out.println("""
-        <div class="{ph.ns("slice")}">
-          <div class="{ph.ns("slice-contents {ph.currentSlicesColor}")}">
+        <div class="{ph.ns("slice {ph.currentSlicesColor}")}">
+          <div class="{ph.ns("slice-contents")}">
     """);
 
     link = seriesNextLink.get();
@@ -188,20 +208,12 @@ body {
     """);
   }
 
-  if (page.metadata.layout == "annotated") {
-    ph.out.println("""
-      </div>
-      <div class="{ph.ns("page-right")}">
-      </div>
-    </div>
-    """);
-  }
-
   ph.out.println("""
+    </div>
   </div>
 
   {blogFooter()} 
-  <script src="/components/Annotated.js"></script>
+  <script src="/components/annotated.js"></script>
 </body>
 </html>
   """);
@@ -268,7 +280,7 @@ fn populateTableOfContents(openTocLists &List<&PolyList>, this &Section impl Pag
 fn populateTableOfContents2(openTocLists &List<&PolyList>, virtual this &SectionMember) abstract;
 fn populateTableOfContents2(openTocLists &List<&PolyList>, header &Header impl SectionMember) {
   while (header.level > openTocLists.len()) {
-    newList = PolyList(false, List<ListMember>());
+    newList = PolyList("bullet", List<ListMember>());
     newListBorrow = &newList;
     openTocLists.get(openTocLists.len() - 1).members.add(newList);
     openTocLists.add(newListBorrow);
@@ -289,6 +301,7 @@ fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Paragraph impl 
 fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Split impl SectionMember) { }
 fn populateTableOfContents2(openTocLists &List<&PolyList>, this &CodeSnippet impl SectionMember) { }
 fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Quote impl SectionMember) { }
+fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Callout impl SectionMember) { }
 
 
 
@@ -315,7 +328,6 @@ fn printSectionMember(ph &PrintHelper, virtual this &SectionMember) abstract;
 fn printSectionMember(ph &PrintHelper, this &Header impl SectionMember) {
   ph.out.println("""<h{this.level + 1} class="{ph.ns("")}" id="{urlifyHeadingText(this)}">""");
   printInlineNode(ph, this.contents);
-  println("Printing header: " + getHeaderText(this));
   ph.out.println("""</h{this.level + 1}>""");
 }
 fn printSectionMember(ph &PrintHelper, this &PolyList impl SectionMember) {
@@ -329,12 +341,14 @@ fn printSectionMember(ph &PrintHelper, this &Paragraph impl SectionMember) {
 }
 fn printSectionMember(ph &PrintHelper, this &Split impl SectionMember) {
   ph.out.println("""<div class="{ph.ns("split")}">""");
-  ph.out.println("""<div class="{ph.ns("split-left")}">""");
-  this.left.each({ printSection(ph, _); });
-  ph.out.println("""</div>""");
-  ph.out.println("""<div class="{ph.ns("split-right")}">""");
-  this.right.each({ printSection(ph, _); });
-  ph.out.println("""</div>""");
+
+  this.columns.each((columnSections){
+    ph2 = ph;
+    ph.out.println("""<div class="{ph.ns("split-column")}">""");
+    columnSections.each((s){ printSection(ph2, s); });
+    ph.out.println("""</div>""");
+  });
+
   ph.out.println("""</div>""");
 }
 fn printSectionMember(ph &PrintHelper, this &Quote impl SectionMember) {
@@ -343,8 +357,13 @@ fn printSectionMember(ph &PrintHelper, this &Quote impl SectionMember) {
   ph.out.println("");
   ph.out.println("</div>");
 }
+fn printSectionMember(ph &PrintHelper, this &Callout impl SectionMember) {
+  ph.out.println("""<div class="{ph.ns("callout")}">""");
+  printInlineNode(ph, this.contents);
+  ph.out.println("");
+  ph.out.println("</div>");
+}
 fn printSectionMember(ph &PrintHelper, this &CodeSnippet impl SectionMember) {
-
   langClass = if (this.language.len() > 0) { "language-" + this.language } else { "" };
 
   ph.out.print("""
@@ -354,17 +373,14 @@ fn printSectionMember(ph &PrintHelper, this &CodeSnippet impl SectionMember) {
 
   codeHtml =
     if (this.language == "Vale" or this.language == "vale") {
-      println("Vale:");
-      println(this.code);
       writeStringToFile("/tmp/highlight{ph.codeSnippetsPrinted}.vale", this.code.str());
-      executeResult = executeProgram("java -cp {ph.valestromPath} net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale -oh /tmp/highlight{ph.codeSnippetsPrinted}.html");
+      command = "java -cp {ph.valestromPath}/Valestrom.jar net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale -oh /tmp/highlight{ph.codeSnippetsPrinted}.html";
+      executeResult = executeProgram(command);
       if (executeResult.returnCode != 0) {
         panic(
             "Highlighting failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
       }
       s = readFileAsString("/tmp/highlight{ph.codeSnippetsPrinted}.html").slice();
-      println("HTML:");
-      println(s);
       mut ph.codeSnippetsPrinted = ph.codeSnippetsPrinted + 1;
       = s;
     } else {
@@ -453,15 +469,15 @@ fn collectTextNodes(textNodes &List<StrSlice>, this &NoteAnchor impl InlineNode)
 
 
 fn printList(ph &PrintHelper, list &PolyList) {
-  if (list.ordered) {
+  if (list.style == "ordered") {
     ph.out.println("""<ol class="{ph.ns("")}">""");
   } else {
-    ph.out.println("""<ul class="{ph.ns("")}">""");
+    ph.out.println("""<ul class="{ph.ns("{list.style}")}">""");
   }
 
   list.members.each({ printListMember(ph, _); });
 
-  if (list.ordered) {
+  if (list.style == "ordered") {
     ph.out.println("</ol>");
   } else {
     ph.out.println("</ul>");
@@ -485,45 +501,75 @@ fn printSlice(this &Slice, ph &PrintHelper) {
   ph.out.println("""
       </div>
   """);
-  ph.out.println("""<div class="{ph.ns("slice-notes")}">""");
+  first = not ph.printedFirstNotes;
+  firstClass = if (first) { "first" } else { "" };
+  ph.out.println("""<div class="{ph.ns("slice-notes {firstClass}")}">""");
 
-  if (ph.metadata.layout == "annotated" and not ph.printedFirstNotes) {
+  if (ph.metadata.layout == "annotated" and first) {
     ph.out.println("""
-      <div class="{ph.ns("c-toc root")}">
-      {if (ph.metadata.seriesName != "") { ph.metadata.seriesName } else { "<b>{ph.metadata.title}</b>".slice() }}
+      <nav class="{ph.ns("c-toc root")}">
+      {if (ph.metadata.seriesName != "") { ph.metadata.seriesName } else { """<div class="{ph.ns("c-toc title")}">{ph.metadata.title}</div>""".slice() }}
     """);
     printList(ph, ph.tableOfContents);
     ph.out.println("""
+      </nav>
+      <div class="{ph.ns("notes-first-header")}">Notes</div>
+    """);
+  }
+  if (this.ids.len() > 0) {
+    ph.out.println("""
+      <div class="{ph.ns("notes-container")}">
+        <input type="checkbox" class="{ph.ns("toggle")}" id="toggle{ph.slicesPrinted}" />
+
+        <label class="{ph.ns("notes-header")}" for="toggle{ph.slicesPrinted}">
+          <span class="{ph.ns("notes-header-text when-expanded")}">Notes [&ndash;]</span>
+          <span class="{ph.ns("notes-header-text when-collapsed")}">Notes [+]</span>
+    """);
+
+    this.ids.each((id){
+      vassert(
+          this.noteContentsById.has(id),
+          id + " not in notes?");
+      ph.out.println("""<span class="{ph.ns("note-preview when-collapsed note-color{id mod 6}")}">{id}</span>""");
+    });
+
+    ph.out.println("""
+        </label>
+
+        <div class="{ph.ns("notes-contents")}">
+    """);
+
+    this.ids.each((id){
+      vassert(
+          this.noteContentsById.has(id),
+          id + " not in notes?");
+      noteContents =
+          this.noteContentsById.get(id).get();
+
+      ph.out.println("""<div id="note{id}" class="{ph.ns("note")}" data-noteId="{id}">""");
+      ph.out.println("""<span class="{ph.ns("note-starter note-color{id mod 6}")}">{id}</span>""");
+      printSection(ph, noteContents);
+      ph.out.println("</div>");
+    });
+
+    ph.out.println("""
+        </div>
       </div>
-      <div class="{ph.ns("notes-header")}"><div>Notes</div></div>
     """);
   }
 
-  this.ids.each((id){
-    vassert(
-        this.noteContentsById.has(id),
-        id + " not in notes?");
-    noteContents =
-        this.noteContentsById.get(id).get();
-
-    ph.out.println("""<div id="note{id}" class="{ph.ns("note")}" data-noteId="{id}">""");
-    ph.out.println("""<div class="{ph.ns("note-starter note-color{id mod 6}")}">{id}</div>""");
-    printSection(ph, noteContents);
-    ph.out.println("</div>");
-  });
-
   ph.out.println("</div>");
+  mut ph.slicesPrinted = ph.slicesPrinted + 1;
 
   if (this.newColor != "") {
     mut ph.currentSlicesColor = this.newColor;
   }
 
-  println("making new slice, " + ph.currentSlicesColor);
   // End the current slice div, start a new one and start up a contents div
   ph.out.println("""
     </div>
-    <div class="{ph.ns("slice")}">
-      <div class="{ph.ns("slice-contents {ph.currentSlicesColor}")}">
+    <div class="{ph.ns("slice {ph.currentSlicesColor}")}">
+      <div class="{ph.ns("slice-contents")}">
   """);
 
   mut ph.printedFirstNotes = true;

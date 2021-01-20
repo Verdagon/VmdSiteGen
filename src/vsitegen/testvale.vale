@@ -1,0 +1,65 @@
+
+struct TestHelper {
+  valestromPath str;
+}
+
+
+fn testPage(valestromPath str, page &Page) {
+  th = TestHelper(valestromPath);
+  page.members.each({ testPageMember(&th, _); });
+}
+
+fn testPageMember(th &TestHelper, virtual this &PageMember) abstract;
+fn testPageMember(th &TestHelper, this &Slice impl PageMember) { }
+fn testPageMember(th &TestHelper, this &Section impl PageMember) {
+  testSection(th, this);
+}
+fn testSection(th &TestHelper, this &Section) {
+  this.members.each({ testSectionMember(th, _) });
+}
+
+fn testSectionMember(th &TestHelper, virtual this &SectionMember) abstract;
+fn testSectionMember(th &TestHelper, this &Header impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &PolyList impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &Paragraph impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &Split impl SectionMember) {
+  this.columns.each((columnSections){
+    th2 = th;
+    columnSections.each((s){ testSection(th2, s); });
+  });
+}
+fn testSectionMember(th &TestHelper, this &Quote impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &Callout impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &CodeSnippet impl SectionMember) {
+  if (this.language == "Vale" or this.language == "vale") {
+    if (this.args.len() > 0 and this.args.get(0) == "notest") {
+      ret void();
+    }
+
+    extraArgs! = "";
+    allCode! = "";
+    each (this.args) (arg){
+      println("arg: " + arg);
+      if (arg.startsWith("`")) {
+        mut allCode = allCode + arg.slice(1, arg.len() - 1) + "\n";
+      } else {
+        mut extraArgs = " " + th.valestromPath + "/" + arg;
+      }
+    }
+    mut allCode = allCode + this.code;
+
+    println("Running code:");
+    println(allCode);
+
+    writeStringToFile("/tmp/test.vale", allCode);
+
+    command = "java -cp {th.valestromPath}/Valestrom.jar net.verdagon.vale.driver.Driver build /tmp/test.vale -o /tmp/output.vast {extraArgs}";
+
+    println("Running: {command}");
+    executeResult = executeProgram(command);
+    if (executeResult.returnCode != 0) {
+      panic(
+          "Code snippet failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
+    }
+  }
+}

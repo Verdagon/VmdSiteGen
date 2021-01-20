@@ -17,6 +17,7 @@ struct Metadata {
   seriesEntries List<Link>;
   layout StrSlice;
   namespace StrSlice;
+  cssFiles List<StrSlice>;
 }
 
 
@@ -43,8 +44,7 @@ struct Paragraph {
 impl SectionMember for Paragraph;
 
 struct Split {
-  left List<Section>;
-  right List<Section>;
+  columns List<List<Section>>;
 }
 impl SectionMember for Split;
 
@@ -53,6 +53,13 @@ struct Quote {
   contents InlineNode;
 }
 impl SectionMember for Quote;
+
+
+struct Callout {
+  contents InlineNode;
+}
+impl SectionMember for Callout;
+
 
 struct Header {
   level int;
@@ -63,6 +70,7 @@ impl SectionMember for Header;
 
 struct CodeSnippet {
   language StrSlice;
+  args List<StrSlice>;
   code StrSlice;
 }
 impl SectionMember for CodeSnippet;
@@ -71,7 +79,8 @@ impl SectionMember for CodeSnippet;
 // Named PolyList because can't call it list, and it's
 // either unordered or ordered list.
 struct PolyList {
-  ordered bool;
+  // can be "ordered", "bullet", "space"
+  style str;
   members List<ListMember>;
 }
 impl SectionMember for PolyList;

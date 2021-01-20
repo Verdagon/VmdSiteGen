@@ -1,13 +1,7 @@
 
-fn blogHeader(small bool) str {
-  vorb =
-    """
-      <div class="header vorb-container">
-        <div class="header vorb"></div>
-      </div>
-    """;
+fn blogHeader(explorations bool) str {
   title =
-    if (small) {
+    if (explorations) {
       """
         <div class="header title"><span class="header explorations">Explorations</span> in <span class="header vale">Vale</span></div>
       """
@@ -17,12 +11,12 @@ fn blogHeader(small bool) str {
       """
     };
   links =
-    if (small) {
+    if (explorations) {
       """
         <div class="header links">
           <a href="/">Home</a>
           <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
-          <a class="github" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
+          <a class="discord" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
         </div>
       """
     } else {
@@ -38,12 +32,14 @@ fn blogHeader(small bool) str {
     };
   ret
     """
-      <div class="header root {if (small) {" small"} else {""}}">
+      <div class="header root {if (explorations) {" explorations"} else {" mainsite"}}">
         <div class="header contents">
-          <a href="/">{vorb}</a>
-          <div class="header text">
-            <a href="/">{title}</a>
-          </div>
+          <a href="/" class="header vorb-container">
+            <div class="header vorb"></div>
+          </a>
+          <a href="/" class="header text">
+            {title}
+          </a>
 
           {links}
         </div>
