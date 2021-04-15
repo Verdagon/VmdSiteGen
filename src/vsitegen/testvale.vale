@@ -5,61 +5,153 @@ struct TestHelper {
 
 
 fn testPage(valestromPath str, page &Page) {
+  // println("zork");
   th = TestHelper(valestromPath);
   page.members.each({ testPageMember(&th, _); });
 }
 
 fn testPageMember(th &TestHelper, virtual this &PageMember) abstract;
-fn testPageMember(th &TestHelper, this &Slice impl PageMember) { }
+fn testPageMember(th &TestHelper, this &Slice impl PageMember) { 
+  // println("zork");
+}
 fn testPageMember(th &TestHelper, this &Section impl PageMember) {
+  // println("zork");
   testSection(th, this);
 }
 fn testSection(th &TestHelper, this &Section) {
+  // println("zork");
   this.members.each({ testSectionMember(th, _) });
 }
 
 fn testSectionMember(th &TestHelper, virtual this &SectionMember) abstract;
-fn testSectionMember(th &TestHelper, this &Header impl SectionMember) { }
-fn testSectionMember(th &TestHelper, this &PolyList impl SectionMember) { }
-fn testSectionMember(th &TestHelper, this &Paragraph impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &Header impl SectionMember) { 
+  // println("zork");
+}
+fn testSectionMember(th &TestHelper, this &PolyList impl SectionMember) { 
+  // println("zork");
+}
+fn testSectionMember(th &TestHelper, this &Paragraph impl SectionMember) { 
+  // println("zork");
+}
 fn testSectionMember(th &TestHelper, this &Split impl SectionMember) {
+  // println("zork");
   this.columns.each((columnSections){
+  // println("gork");
     th2 = th;
     columnSections.each((s){ testSection(th2, s); });
   });
 }
-fn testSectionMember(th &TestHelper, this &Quote impl SectionMember) { }
-fn testSectionMember(th &TestHelper, this &Callout impl SectionMember) { }
+fn testSectionMember(th &TestHelper, this &Quote impl SectionMember) { 
+  // println("gork");
+}
+fn testSectionMember(th &TestHelper, this &Callout impl SectionMember) { 
+  // println("gork");
+}
 fn testSectionMember(th &TestHelper, this &CodeSnippet impl SectionMember) {
-  if (this.language == "Vale" or this.language == "vale") {
-    if (this.args.len() > 0 and this.args.get(0) == "notest") {
-      ret void();
-    }
+  // println("gork");
+  testCode(th, this);
+}
 
-    extraArgs! = "";
-    allCode! = "";
-    each (this.args) (arg){
-      println("arg: " + arg);
-      if (arg.startsWith("`")) {
-        mut allCode = allCode + arg.slice(1, arg.len() - 1) + "\n";
-      } else {
-        mut extraArgs = " " + th.valestromPath + "/" + arg;
-      }
-    }
-    mut allCode = allCode + this.code;
-
-    println("Running code:");
-    println(allCode);
-
-    writeStringToFile("/tmp/test.vale", allCode);
-
-    command = "java -cp {th.valestromPath}/Valestrom.jar net.verdagon.vale.driver.Driver build /tmp/test.vale -o /tmp/output.vast {extraArgs}";
-
-    println("Running: {command}");
-    executeResult = executeProgram(command);
-    if (executeResult.returnCode != 0) {
-      panic(
-          "Code snippet failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
+fn getCodeForLanguage(codeSnippet &CodeSnippet, language StrSlice) StrSlice {
+  // println("gork");
+  code! = "".slice();
+  each (codeSnippet.items) (item){
+    if (item.language == language) {
+      mut code = slice(code + item.code);
     }
   }
+  ret code;
+}
+
+fn testCode(th &TestHelper, snippet &CodeSnippet) {
+  // println("ork");
+  if (snippet.args.len() > 0 and snippet.args.get(0) == "notest") {
+    ret void();
+  }
+
+  // println("in testcode!");
+
+  vale! = getCodeForLanguage(snippet, "vale".slice());
+  c = getCodeForLanguage(snippet, "c".slice());
+  stdin = getCodeForLanguage(snippet, "stdin".slice());
+  stdout = getCodeForLanguage(snippet, "stdout".slice());
+  
+  if (vale == "") {
+    println("Skipping snippet, contains no Vale.");
+    ret void();
+  } else {
+    println("Testing!");
+  }
+
+  // println("bork!");
+
+  extraArgs! = "";
+  each (snippet.args) (arg){
+    // println("arg: " + arg);
+    if (arg.startsWith("`")) {
+      mut vale = slice(vale + "\n" + arg.slice(1, arg.len() - 1) + "\n");
+    } else {
+      mut extraArgs = " " + th.valestromPath + "/" + arg;
+    }
+  }
+
+  // println("Running code:");
+  // println(vale);
+
+  // println("Making directory!");
+  makeDirectory("/tmp/vale");
+  // println("Made directory!");
+  writeStringToFile("/tmp/vale/test.vale", vale.str());
+  writeStringToFile("/tmp/vale/test.c", c.str());
+  // println("Made files!");
+
+  buildCommand = "python3 {th.valestromPath}/valec.py build /tmp/vale/test.vale /tmp/vale/test.c -o /tmp/vale/test {extraArgs} --add-exports-include-path";
+
+  // println("Building: {buildCommand}");
+  buildResult = executeProgram(buildCommand);
+  if (buildResult.returnCode != 0) {
+    println("Couldn't build! Test:");
+    println(vale);
+    println("Stdout:");
+    println(buildResult.stdout);
+    if (buildResult.stderr.len() > 0) {
+      println(buildResult.stderr);
+    }
+    panic("Couldn't build test!");
+  }
+
+  // println("Writing stdin and stdout. stdin:");
+  // println(stdin.str());
+  // writeStringToFile("/tmp/vale/teststdin", stdin.str());
+  // writeStringToFile("/tmp/vale/teststdout", stdout.str());
+
+  // println("Running test code!");
+
+  // println("Running: /tmp/vale/test");
+  runResult =
+      executeProgramV2(
+          ExecuteProgramArgs(
+              "/tmp/vale/test",
+              Array<imm, str>(
+                  snippet.args.len(),
+                  &IFunction1<mut, int, str>((i){ snippet.args.get(i).str() })),
+              // MakeImmArray(
+              //     snippet.args.len(),
+              //     (i){ snippet.args.get(i) }),
+              stdin.str()));
+  // println("Stdout: " + runResult.stdout);
+
+  if (stdout.trim().len() > 0) {
+    if (runResult.stdout.trim() != stdout.trim()) {
+      println("Program did not have expected output! Program:");
+      println(vale);
+      println("Expected:");
+      println(stdout.trim());
+      println("Actual:");
+      println(runResult.stdout.trim());
+      panic("Failed!");
+    }
+  }
+
+  println("Success!");
 }

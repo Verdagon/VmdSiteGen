@@ -1,4 +1,11 @@
 
+struct ExecuteProgramArgs export imm {
+  program str;
+  args Array<imm, str>;
+  stdin str;
+}
+export Array<imm, str> as ImmStrArray;
+
 struct ExecuteProgramResult export {
   returnCode int;
   stdout str;
@@ -10,6 +17,8 @@ ExecuteProgramResult export {
 }
 
 fn executeProgram(command str) ExecuteProgramResult extern;
+
+fn executeProgramV2(args ExecuteProgramArgs) ExecuteProgramResult extern;
 
 
 fn replaceAll(haystack! StrSlice, needle StrSlice, replacement StrSlice) StrSlice {
@@ -27,3 +36,5 @@ fn replaceAll(haystack! StrSlice, needle StrSlice, replacement StrSlice) StrSlic
   // unreachable
   ret "".slice();
 }
+
+fn makeDirectory(path str) extern;

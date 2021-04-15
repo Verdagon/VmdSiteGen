@@ -364,6 +364,12 @@ fn printSectionMember(ph &PrintHelper, this &Callout impl SectionMember) {
   ph.out.println("</div>");
 }
 fn printSectionMember(ph &PrintHelper, this &CodeSnippet impl SectionMember) {
+  each this.items {
+    printCodeItem(ph, _);
+  }
+}
+
+fn printCodeItem(ph &PrintHelper, this &CodeItem) {
   langClass = if (this.language.len() > 0) { "language-" + this.language } else { "" };
 
   ph.out.print("""
@@ -372,7 +378,7 @@ fn printSectionMember(ph &PrintHelper, this &CodeSnippet impl SectionMember) {
       <div class="{ph.ns("c-snippet code")}">""");
 
   codeHtml =
-    if (this.language == "Vale" or this.language == "vale") {
+    if (this.language == "vale") {
       writeStringToFile("/tmp/highlight{ph.codeSnippetsPrinted}.vale", this.code.str());
       command = "java -cp {ph.valestromPath}/Valestrom.jar net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale -oh /tmp/highlight{ph.codeSnippetsPrinted}.html";
       executeResult = executeProgram(command);

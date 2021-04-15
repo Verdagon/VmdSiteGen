@@ -68,10 +68,14 @@ struct Header {
 impl SectionMember for Header;
 
 
-struct CodeSnippet {
+struct CodeItem {
   language StrSlice;
-  args List<StrSlice>;
   code StrSlice;
+}
+
+struct CodeSnippet {
+  items List<CodeItem>;
+  args List<StrSlice>;
 }
 impl SectionMember for CodeSnippet;
 

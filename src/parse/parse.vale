@@ -478,16 +478,12 @@ StrSlice {
 }
 
 
-fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet {
+fn parseCodeItem(notesCollector &NotesCollector, iter &InputIter) CodeItem {
+  // println("go");
+
   iter.skipExpect("```");
 
-  // Now we'll parse args that come after the language, like in:
-  //   ```Vale: vstl/list.vale `struct A{}`
-  //   fn main() {
-  //     a = A();
-  //   }
-  //   ```
-
+// println("ko");
 
   lang =
       parseTextUntil(
@@ -496,35 +492,19 @@ fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet
             if (not it.hasNext()) {
                panic("``` must have matching \\n```!");
             }
-            ret not it.nextIs(":") and not it.nextIs("\n");
+            ret not it.nextIs("\n");
           }));
-
-  args = List<StrSlice>();
-  if (iter.skipIfNext(":")) {
-    running! = true;
-    while (running) {
-
-      while (iter.skipIfNext(" ")) {}
-
-      if (iter.skipIfNext("\n")) {
-        mut running = false;
-      } else if (iter.skipIfNext("`")) {
-        x = iter.getUntilExpected("`");
-        args.add(slice("`" + x + "`"));
-      } else {
-        // Get until whitespace
-        arg = parseTextUntil(
-            &iter,
-            &IFunction1<mut, &InputIter, bool>((it){
-              if (not iter.hasNext()) {
-                panic("``` must have matching \\n```!");
-              }
-              ret not iter.nextIs(" ") and not iter.nextIs("\n");
-            }));
-        args.add(arg);
-      }
-    }
+  if (lang.has(":")) {
+    panic("Language has : in it!");
   }
+  if (lang.has(" ")) {
+    panic("Language has space in it!");
+  }
+  if (lang.has("`")) {
+    panic("Language has ` in it!");
+  }
+
+// println("bo " + lang);
 
   // We register the chevron notes here and leave the code mostly untouched, because:
   // - If we slice up the code into a Compound with Text and NoteAnchor, then
@@ -542,15 +522,95 @@ fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet
           parseTextUntil(
               &iter,
               &IFunction1<mut, &InputIter, bool>((it){
+// println("bi");
+
                 if (not it.hasNext()) {
+// println("mi");
+
                   panic("``` must have matching \\n```!");
                 }
-                ret not it.skipIfNext("\n```");
+// println("di");
+
+                ret not it.nextIs("\n```");
               })));
+// println("vo");
+  ret CodeItem(lang, code.slice());
+}
 
-  details = iter.getUntilExpected("\n");
+fn parseCodeArgs(iter &InputIter) List<StrSlice> {
+  args = List<StrSlice>();
 
-  ret CodeSnippet(lang, args, code.slice());
+  // println("ante loop");
+
+  running! = true;
+  while (running) {
+
+    // println("moo");
+
+    while (iter.skipIfNext(" ")) {}
+
+    // println("boo");
+    
+    if (iter.skipIfNext("\n")) {
+      // println("zoo");
+    
+      mut running = false;
+    } else if (iter.skipIfNext("`")) {
+      // println("woo");
+      x = iter.getUntilExpected("`");
+      args.add(slice("`" + x + "`"));
+    } else {
+      // println("xoo");
+      // Get until whitespace
+      arg = parseTextUntil(
+          &iter,
+          &IFunction1<mut, &InputIter, bool>((it){
+            if (not iter.hasNext()) {
+              panic("``` must have matching \\n```!");
+            }
+            ret not iter.nextIs(" ") and not iter.nextIs("\n");
+          }));
+      // println("koo");
+      args.add(arg);
+    }
+  }
+  // println("post loop");
+
+  ret args;
+}
+
+fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet {
+  args! = List<StrSlice>();
+  items = List<CodeItem>();
+
+    // println("before loop");
+  running! = true;
+  while (running) {
+    // println("in an iter");
+    items.add(parseCodeItem(notesCollector, iter));
+
+    vassert(iter.nextIs("\n```"));
+    iter.skipExpect("\n");
+    
+    // println("parsed item");
+    if (iter.hasNext() and iter.skipIfNext("```:")) {
+      // Now we'll parse args that come after the language, like in:
+      //   ```Vale
+      //   fn main() {
+      //     a = A();
+      //   }
+      //   ```: vstl/list.vale `struct A{}`
+      mut args = parseCodeArgs(iter);
+      mut running = false;
+    }
+    if (not iter.hasNext() or iter.skipIfNext("```\n")) {
+      // println("breaking");
+      mut running = false;
+    }
+    // println("end an iter");
+  }
+
+  ret CodeSnippet(items, args);
 }
 
 
@@ -559,16 +619,30 @@ fn parseCodeSnippet(notesCollector &NotesCollector, iter &InputIter) CodeSnippet
 fn parseChevronNoteAnchors(notesCollector &NotesCollector, haystack StrSlice) str {
   result! = "";
 
+// println("ba");
+
   iter = InputIter(haystack, true);
+// println("na");
+
   while (iter.hasNext()) {
+// println("va");
+
     if (iter.skipIfNext("«")) {
+// println("za");
+
       noteName = iter.getUntilExpected("»");
       id = addNamedNoteAnchor(notesCollector, noteName);
       mut result = result + ("«" + id + "»");
     } else {
+// println("xa");
+
       mut result = result + iter.getNext();
+
+// println("la");
     }
   }
+// println("ya");
+
 
   ret result;
 }

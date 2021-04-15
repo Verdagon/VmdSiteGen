@@ -33,6 +33,8 @@ fn main() export {
     valestromPath = getMainArg(2);
     inFilepath = getMainArg(3);
 
+    // println("doing testvale");
+
     page = parse(inFilepath);
 
     testPage(valestromPath, &page);
