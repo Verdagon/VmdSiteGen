@@ -9,15 +9,15 @@ fn copy(iter &InputIter) InputIter {
 fn nextIs(self &InputIter, needle str) bool {
   self.rest.startsWith(needle)
 }
-fn skipExpect(self &InputIter, needle str) { skipExpect(self, needle.slice()) }
-fn skipExpect(self &InputIter, needle StrSlice) {
+fn skipExpect(self &!InputIter, needle str) { skipExpect(self, needle.slice()) }
+fn skipExpect(self &!InputIter, needle StrSlice) {
   vassert(self.rest.startsWith(needle), "Expected " + needle);
   mut self.previousWasWordChar =
       isWordChar(needle.slice(needle.len() - 1));
   mut self.rest = self.rest.slice(needle.len());
 }
-fn skipIfNext(self &InputIter, needle str) bool { self.skipIfNext(needle.slice()) }
-fn skipIfNext(self &InputIter, needle StrSlice) bool {
+fn skipIfNext(self &!InputIter, needle str) bool { self!.skipIfNext(needle.slice()) }
+fn skipIfNext(self &!InputIter, needle StrSlice) bool {
   = if (self.rest.startsWith(needle)) {
       skipExpect(self, needle);
       = true;
@@ -25,8 +25,8 @@ fn skipIfNext(self &InputIter, needle StrSlice) bool {
       = false;
     }
 }
-fn skipIfEndsWith(self &InputIter, needle str) bool { self.skipIfEndsWith(needle.slice()) }
-fn skipIfEndsWith(self &InputIter, needle StrSlice) bool {
+fn skipIfEndsWith(self &!InputIter, needle str) bool { self.skipIfEndsWith(needle.slice()) }
+fn skipIfEndsWith(self &!InputIter, needle StrSlice) bool {
   = if (self.rest == needle) {
       skipExpect(self, self.rest);
       = true;
@@ -43,7 +43,7 @@ fn skipIfEndsWith(self &InputIter, needle StrSlice) bool {
 //   mut self.rest = newRest;
 //   = line;
 // }
-fn getUntilExpected(self &InputIter, splitNeedle str) StrSlice {
+fn getUntilExpected(self &!InputIter, splitNeedle str) StrSlice {
   maybeLineAndRest = self.rest.splitOnce(splitNeedle);
   if (maybeLineAndRest.isEmpty()) {
     panic("Expected " + splitNeedle + " but received:\n" + self.rest);
@@ -54,7 +54,7 @@ fn getUntilExpected(self &InputIter, splitNeedle str) StrSlice {
   mut self.rest = newRest;
   = line;
 }
-fn getUntilMaybe(self &InputIter, splitNeedle str) StrSlice {
+fn getUntilMaybe(self &!InputIter, splitNeedle str) StrSlice {
   maybeLineAndRest = self.rest.splitOnce(splitNeedle);
   if (maybeLineAndRest.isEmpty()) {
     line = self.rest;
@@ -69,7 +69,7 @@ fn getUntilMaybe(self &InputIter, splitNeedle str) StrSlice {
   mut self.rest = newRest;
   ret line;
 }
-fn getNext(self &InputIter) StrSlice {
+fn getNext(self &!InputIter) StrSlice {
   result = self.rest.slice(0, 1);
   mut self.previousWasWordChar = isWordChar(result);
   mut self.rest = self.rest.slice(1);
@@ -84,7 +84,7 @@ fn peek(self &InputIter) StrSlice {
 }
 
 
-fn skipIfNextChar<F>(self &InputIter, f F) bool {
+fn skipIfNextChar<F>(self &!InputIter, f F) bool {
   if (self.hasNext() and (f)(self.rest.slice(0, 1))) {
     mut self.previousWasWordChar = self.rest.slice(0, 1).isWordChar();
     mut self.rest = self.rest.slice(1);
@@ -100,14 +100,14 @@ fn nextIsTag(originalInput &InputIter) Opt<StrSlice> {
   input.skipWhitespace();
 }
 
-fn skipWhitespace(input &InputIter) {
-  while (input.skipIfNextChar(isWhitespace)) {
+fn skipWhitespace(input &!InputIter) {
+  while (input!.skipIfNextChar(isWhitespace)) {
     mut input.previousWasWordChar = false;
   }
 }
 
-fn skipNewlines(input &InputIter) {
-  while (input.skipIfNextChar({ _ == "\n" })) {
+fn skipNewlines(input &!InputIter) {
+  while (input!.skipIfNextChar({ _ == "\n" })) {
     mut input.previousWasWordChar = false;
   }
 }

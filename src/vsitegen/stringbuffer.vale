@@ -13,24 +13,24 @@ fn assembleStr(output &Output) str {
   }
   ret result;
 }
-fn print(self &Output, s str) {
-  self.print(s.slice());
+fn print(self &!Output, s str) {
+  self!.print(s.slice());
 }
-fn print(self &Output, s StrSlice) {
-  self.parts.add(s);
+fn print(self &!Output, s StrSlice) {
+  self.parts!.add(s);
 }
-fn print(self &Output, i int) {
-  self.print(str(i).slice());
+fn print(self &!Output, i int) {
+  self!.print(str(i).slice());
 }
-fn println(self &Output, s str) {
-  self.print(s);
-  self.print("\n");
+fn println(self &!Output, s str) {
+  self!.print(s);
+  self!.print("\n");
 }
-fn println(self &Output, s StrSlice) {
-  self.print(s);
-  self.print("\n");
+fn println(self &!Output, s StrSlice) {
+  self!.print(s);
+  self!.print("\n");
 }
-fn println(self &Output, i int) {
-  self.print(i);
-  self.print("\n");
+fn println(self &!Output, i int) {
+  self!.print(i);
+  self!.print("\n");
 }

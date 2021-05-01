@@ -63,6 +63,20 @@ fn getCodeForLanguage(codeSnippet &CodeSnippet, language StrSlice) StrSlice {
   ret code;
 }
 
+fn removeNotes(s StrSlice) str {
+  iter = InputIter(s, true);
+  result! = "";
+  while (iter.hasNext()) {
+    if (iter!.skipIfNext("«")) {
+      // Parser should have replaced the name with an id, like «mynote» to «13».
+      iter!.getUntilExpected("»");
+    } else {
+      mut result = result + iter!.getNext();
+    }
+  }
+  ret result;
+}
+
 fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("ork");
   if (snippet.args.len() > 0 and snippet.args.get(0) == "notest") {
@@ -71,10 +85,10 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
 
   // println("in testcode!");
 
-  vale! = getCodeForLanguage(snippet, "vale".slice());
-  c = getCodeForLanguage(snippet, "c".slice());
-  stdin = getCodeForLanguage(snippet, "stdin".slice());
-  stdout = getCodeForLanguage(snippet, "stdout".slice());
+  vale! = getCodeForLanguage(snippet, "vale".slice()).removeNotes();
+  c = getCodeForLanguage(snippet, "c".slice()).removeNotes();
+  stdin = getCodeForLanguage(snippet, "stdin".slice()).removeNotes();
+  stdout = getCodeForLanguage(snippet, "stdout".slice()).removeNotes();
   
   if (vale == "") {
     println("Skipping snippet, contains no Vale.");
@@ -89,7 +103,7 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   each (snippet.args) (arg){
     // println("arg: " + arg);
     if (arg.startsWith("`")) {
-      mut vale = slice(vale + "\n" + arg.slice(1, arg.len() - 1) + "\n");
+      mut vale = vale + "\n" + arg.slice(1, arg.len() - 1) + "\n";
     } else {
       mut extraArgs = " " + th.valestromPath + "/" + arg;
     }
@@ -101,8 +115,8 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Making directory!");
   makeDirectory("/tmp/vale");
   // println("Made directory!");
-  writeStringToFile("/tmp/vale/test.vale", vale.str());
-  writeStringToFile("/tmp/vale/test.c", c.str());
+  writeStringToFile("/tmp/vale/test.vale", vale);
+  writeStringToFile("/tmp/vale/test.c", c);
   // println("Made files!");
 
   buildCommand = "python3 {th.valestromPath}/valec.py build /tmp/vale/test.vale /tmp/vale/test.c -o /tmp/vale/test {extraArgs} --add-exports-include-path";
@@ -138,7 +152,7 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
               // MakeImmArray(
               //     snippet.args.len(),
               //     (i){ snippet.args.get(i) }),
-              stdin.str()));
+              stdin));
   // println("Stdout: " + runResult.stdout);
 
   if (stdout.trim().len() > 0) {

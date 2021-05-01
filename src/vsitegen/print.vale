@@ -1,6 +1,6 @@
 
 struct PrintHelper {
-  out &Output;
+  out &!Output;
   valestromPath str;
   metadata &Metadata;
   printedFirstNotes! bool;
@@ -22,34 +22,6 @@ struct TableOfContentsBuilder {
   headers List<&Header>;
 }
 
-fn wrapTocInSeriesList(page &Page, tocRootList PolyList) PolyList {
-  if (page.metadata.seriesEntries.len() > 0) {
-    seriesList = PolyList("bullet", List<ListMember>());
-
-    while (page.metadata.seriesEntries.len() > 0 and
-        (page.metadata.seriesEntries.get(0).text != "" or
-            page.metadata.seriesEntries.get(0).url != "")) {
-      seriesList.members.add(ListItem(page.metadata.seriesEntries.remove(0)));
-    }
-
-    vassert(page.metadata.seriesEntries.len() > 0, "wat bork");
-    link = page.metadata.seriesEntries.remove(0);
-    vassert(link.text == "" and link.url == "", "wat zork");
-    seriesList.members.add(ListItem(Bold(Text(slice(page.metadata.title + " *")))));
-    seriesList.members.add(tocRootList);
-
-    while (page.metadata.seriesEntries.len() > 0 and
-        (page.metadata.seriesEntries.get(0).text != "" or
-            page.metadata.seriesEntries.get(0).url != "")) {
-      seriesList.members.add(ListItem(page.metadata.seriesEntries.remove(0)));
-    }
-
-    ret seriesList;
-  } else {
-    ret tocRootList;
-  }
-}
-
 
 fn copySeriesNextLink(page &Page) Opt<Link> {
   foundThisPage! = false;
@@ -65,28 +37,18 @@ fn copySeriesNextLink(page &Page) Opt<Link> {
 }
 
 
-fn printPage(output &Output, valestromPath str, page &Page) {
+fn printPage(output &!Output, valestromPath str, page &Page, tocRootList &PolyList) {
 
-  seriesNextLink = copySeriesNextLink(page);
+  seriesNextLink = copySeriesNextLink(&page);
 
-  unSeriesdTocRootList = PolyList("bullet", List<ListMember>());
-
-  // A stack of all the currently open lists.
-  openTocLists = List<&PolyList>();
-  openTocLists.add(&unSeriesdTocRootList);
-  page.members.each({ populateTableOfContents(&openTocLists, _); });
-  drop(openTocLists);
-
-  tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
-
-  ph = PrintHelper(output, valestromPath, page.metadata, false, &tocRootList, 0, 0, "".slice());
+  ph = PrintHelper(output, valestromPath, &page.metadata, false, &tocRootList, 0, 0, "".slice());
 
   csss =
       page.metadata.cssFiles.map({
         """<link rel="stylesheet" type="text/css" href="{_}"/>"""
       }).join();
 
-  ph.out.println("""
+  ph.out!.println("""
 <!DOCTYPE html>
 <html>
 <head>
@@ -171,44 +133,44 @@ body {
   // This is the first slice div, we occasionally printPageMember
   // will close it, add some notes, and open a new one.
   // Also print out the title and stuff in the first slice.
-  ph.out.println("""
+  ph.out!.println("""
         <div class="{ph.ns("slice {ph.currentSlicesColor}")}">
           <div class="{ph.ns("slice-contents")}">
   """);
 
-  printHeader(&ph);
+  printHeader(&!ph);
 
-  page.members.each({ printPageMember(&ph, _); });
+  page.members.each({ printPageMember(&!ph, _); });
 
   // End the currently open slice div
-  ph.out.println("""
+  ph.out!.println("""
           </div>
         </div>
   """);
   mut ph.slicesPrinted = ph.slicesPrinted + 1;
 
   if (not seriesNextLink.isEmpty()) {
-    ph.out.println("""
+    ph.out!.println("""
         <div class="{ph.ns("slice {ph.currentSlicesColor}")}">
           <div class="{ph.ns("slice-contents")}">
     """);
 
     link = seriesNextLink.get();
     inlines = List<InlineNode>();
-    inlines.add(Bold(Text("Next: ".slice())));
-    inlines.add(Link(link.text, link.url));
+    inlines!.add(Bold(Text("Next: ".slice())));
+    inlines!.add(Link(link.text, link.url));
     para = Paragraph(Compound(inlines));
     s = Section(List<SectionMember>());
-    s.members.add(para);
-    printSection(&ph, &s);
+    s.members!.add(para);
+    printSection(&!ph, &s);
 
-    ph.out.println("""
+    ph.out!.println("""
             </div>
           </div>
     """);
   }
 
-  ph.out.println("""
+  ph.out!.println("""
     </div>
   </div>
 
@@ -251,22 +213,22 @@ fn urlifyHeadingText(header &Header) str {
   ret result;
 }
 
-fn printHeader(ph &PrintHelper) {
+fn printHeader(ph &!PrintHelper) {
   if (ph.metadata.realm != "home") {
-    ph.out.println("""
+    ph.out!.println("""
           <div class="{ph.ns("metadata")}">
             <h1 class="{ph.ns("noline cozy")}" style="margin-top: 8px">{ph.metadata.title}</h1>
     """);
 
     if (ph.metadata.subtitle != "") {
-      ph.out.println("""<div class="{ph.ns("subtitle content cozy")}">{ph.metadata.subtitle}</div>""");
+      ph.out!.println("""<div class="{ph.ns("subtitle content cozy")}">{ph.metadata.subtitle}</div>""");
     }
     if (ph.metadata.date != "" or ph.metadata.author != "") {
-      ph.out.println("""
+      ph.out!.println("""
               <div class="{ph.ns("content")}"><span class="{ph.ns("date")}">{ph.metadata.date}</span> <span class="{ph.ns("author")}">&nbsp;&mdash;&nbsp; {ph.metadata.author}</span></div>
       """);
     }
-    ph.out.println("""</div>""");
+    ph.out!.println("""</div>""");
   }
 }
 
@@ -282,15 +244,15 @@ fn populateTableOfContents2(openTocLists &List<&PolyList>, header &Header impl S
   while (header.level > openTocLists.len()) {
     newList = PolyList("bullet", List<ListMember>());
     newListBorrow = &newList;
-    openTocLists.get(openTocLists.len() - 1).members.add(newList);
-    openTocLists.add(newListBorrow);
+    openTocLists!.get(openTocLists.len() - 1).members!.add(newList);
+    openTocLists!.add(newListBorrow);
   }
   while (header.level < openTocLists.len()) {
-    openTocLists.remove(openTocLists.len() - 1);
+    openTocLists!.remove(openTocLists.len() - 1);
   }
 
-  openTocLists.get(openTocLists.len() - 1)
-      .members.add(
+  openTocLists!.get(openTocLists.len() - 1)
+      .members!.add(
           ListItem(
               Link(
                   getHeaderText(header).slice(),
@@ -308,71 +270,71 @@ fn populateTableOfContents2(openTocLists &List<&PolyList>, this &Callout impl Se
 
 
 
-fn printPageMember(ph &PrintHelper, virtual this &PageMember) abstract;
-fn printPageMember(ph &PrintHelper, this &Slice impl PageMember) {
+fn printPageMember(ph &!PrintHelper, virtual this &PageMember) abstract;
+fn printPageMember(ph &!PrintHelper, this &Slice impl PageMember) {
   printSlice(this, ph);
 }
-fn printPageMember(ph &PrintHelper, this &Section impl PageMember) {
+fn printPageMember(ph &!PrintHelper, this &Section impl PageMember) {
   printSection(ph, this);
 }
-fn printSection(ph &PrintHelper, this &Section) {
-  ph.out.println("""<section class="{ph.ns("")}">""");
+fn printSection(ph &!PrintHelper, this &Section) {
+  ph.out!.println("""<section class="{ph.ns("")}">""");
 
   this.members.each({ printSectionMember(ph, _) });
 
-  ph.out.println("");
-  ph.out.println("</section>");
+  ph.out!.println("");
+  ph.out!.println("</section>");
 }
 
-fn printSectionMember(ph &PrintHelper, virtual this &SectionMember) abstract;
-fn printSectionMember(ph &PrintHelper, this &Header impl SectionMember) {
-  ph.out.println("""<h{this.level + 1} class="{ph.ns("")}" id="{urlifyHeadingText(this)}">""");
+fn printSectionMember(ph &!PrintHelper, virtual this &SectionMember) abstract;
+fn printSectionMember(ph &!PrintHelper, this &Header impl SectionMember) {
+  ph.out!.println("""<h{this.level + 1} class="{ph.ns("")}" id="{urlifyHeadingText(this)}">""");
   printInlineNode(ph, this.contents);
-  ph.out.println("""</h{this.level + 1}>""");
+  ph.out!.println("""</h{this.level + 1}>""");
 }
-fn printSectionMember(ph &PrintHelper, this &PolyList impl SectionMember) {
+fn printSectionMember(ph &!PrintHelper, this &PolyList impl SectionMember) {
   printList(ph, this);
 }
-fn printSectionMember(ph &PrintHelper, this &Paragraph impl SectionMember) {
-  ph.out.println("""<p class="{ph.ns("")}">""");
+fn printSectionMember(ph &!PrintHelper, this &Paragraph impl SectionMember) {
+  ph.out!.println("""<p class="{ph.ns("")}">""");
   printInlineNode(ph, this.contents);
-  ph.out.println("");
-  ph.out.println("</p>");
+  ph.out!.println("");
+  ph.out!.println("</p>");
 }
-fn printSectionMember(ph &PrintHelper, this &Split impl SectionMember) {
-  ph.out.println("""<div class="{ph.ns("split")}">""");
+fn printSectionMember(ph &!PrintHelper, this &Split impl SectionMember) {
+  ph.out!.println("""<div class="{ph.ns("split")}">""");
 
   this.columns.each((columnSections){
     ph2 = ph;
-    ph.out.println("""<div class="{ph.ns("split-column")}">""");
+    ph.out!.println("""<div class="{ph.ns("split-column")}">""");
     columnSections.each((s){ printSection(ph2, s); });
-    ph.out.println("""</div>""");
+    ph.out!.println("""</div>""");
   });
 
-  ph.out.println("""</div>""");
+  ph.out!.println("""</div>""");
 }
-fn printSectionMember(ph &PrintHelper, this &Quote impl SectionMember) {
-  ph.out.println("""<div class="{ph.ns("quote")}">""");
+fn printSectionMember(ph &!PrintHelper, this &Quote impl SectionMember) {
+  ph.out!.println("""<div class="{ph.ns("quote")}">""");
   printInlineNode(ph, this.contents);
-  ph.out.println("");
-  ph.out.println("</div>");
+  ph.out!.println("");
+  ph.out!.println("</div>");
 }
-fn printSectionMember(ph &PrintHelper, this &Callout impl SectionMember) {
-  ph.out.println("""<div class="{ph.ns("callout")}">""");
+fn printSectionMember(ph &!PrintHelper, this &Callout impl SectionMember) {
+  ph.out!.println("""<div class="{ph.ns("callout")}">""");
   printInlineNode(ph, this.contents);
-  ph.out.println("");
-  ph.out.println("</div>");
+  ph.out!.println("");
+  ph.out!.println("</div>");
 }
-fn printSectionMember(ph &PrintHelper, this &CodeSnippet impl SectionMember) {
+fn printSectionMember(ph &!PrintHelper, this &CodeSnippet impl SectionMember) {
   each this.items {
     printCodeItem(ph, _);
   }
 }
 
-fn printCodeItem(ph &PrintHelper, this &CodeItem) {
+fn printCodeItem(ph &!PrintHelper, this &CodeItem) {
   langClass = if (this.language.len() > 0) { "language-" + this.language } else { "" };
 
-  ph.out.print("""
+  ph.out!.print("""
     <div class="{ph.ns("c-snippet root {langClass}")}">
       <div class="{ph.ns("c-snippet header")}">{this.language}</div>
       <div class="{ph.ns("c-snippet code")}">""");
@@ -396,58 +358,58 @@ fn printCodeItem(ph &PrintHelper, this &CodeItem) {
     };
   printWithChevronNotes(ph, codeHtml);
 
-  ph.out.println(
+  ph.out!.println(
    """</div>
     </div>
   """);
 }
 
-fn printWithChevronNotes(ph &PrintHelper, s StrSlice) {
+fn printWithChevronNotes(ph &!PrintHelper, s StrSlice) {
   iter = InputIter(s, true);
   while (iter.hasNext()) {
-    if (iter.skipIfNext("«")) {
+    if (iter!.skipIfNext("«")) {
       // Parser should have replaced the name with an id, like «mynote» to «13».
-      noteIdStr = iter.getUntilExpected("»");
+      noteIdStr = iter!.getUntilExpected("»");
       noteId = noteIdStr.int().get();
       printNoteAnchor(ph, &NoteAnchor(noteId));
     } else {
-      ph.out.print(iter.getNext());
+      ph.out!.print(iter!.getNext());
     }
   }
 }
 
 
-fn printInlineNode(ph &PrintHelper, virtual this &InlineNode) abstract;
-fn printInlineNode(ph &PrintHelper, this &Bold impl InlineNode) {
-  ph.out.print("<b>");
+fn printInlineNode(ph &!PrintHelper, virtual this &InlineNode) abstract;
+fn printInlineNode(ph &!PrintHelper, this &Bold impl InlineNode) {
+  ph.out!.print("<b>");
   printInlineNode(ph, this.inner);
-  ph.out.print("</b>");
+  ph.out!.print("</b>");
 }
-fn printInlineNode(ph &PrintHelper, this &Italic impl InlineNode) {
-  ph.out.print("<i>");
+fn printInlineNode(ph &!PrintHelper, this &Italic impl InlineNode) {
+  ph.out!.print("<i>");
   printInlineNode(ph, this.inner);
-  ph.out.print("</i>");
+  ph.out!.print("</i>");
 }
-fn printInlineNode(ph &PrintHelper, this &Text impl InlineNode) {
-  ph.out.print(this.text);
+fn printInlineNode(ph &!PrintHelper, this &Text impl InlineNode) {
+  ph.out!.print(this.text);
 }
-fn printInlineNode(ph &PrintHelper, this &InlineCode impl InlineNode) {
-  ph.out.print("""<span class="{ph.ns("inline-code")}">""");
-  ph.out.print(
+fn printInlineNode(ph &!PrintHelper, this &InlineCode impl InlineNode) {
+  ph.out!.print("""<span class="{ph.ns("inline-code")}">""");
+  ph.out!.print(
     this.inner.replaceAll("<".slice(), "&lt;".slice())
       .replaceAll(">".slice(), "&gt;".slice()));
-  ph.out.print("</span>");
+  ph.out!.print("</span>");
 }
-fn printInlineNode(ph &PrintHelper, this &Link impl InlineNode) {
-  ph.out.print("""<a class="{ph.ns("")}" href="{this.url}">{this.text}</a>""");
+fn printInlineNode(ph &!PrintHelper, this &Link impl InlineNode) {
+  ph.out!.print("""<a class="{ph.ns("")}" href="{this.url}">{this.text}</a>""");
 }
-fn printInlineNode(ph &PrintHelper, this &NoteAnchor impl InlineNode) {
+fn printInlineNode(ph &!PrintHelper, this &NoteAnchor impl InlineNode) {
   printNoteAnchor(ph, this);
 }
-fn printNoteAnchor(ph &PrintHelper, this &NoteAnchor) {
-  ph.out.print("""<a class="{ph.ns("note-anchor note-color{this.id mod 6}")}" href="#note{this.id}" data-noteId="{this.id}">{this.id}</a>""");
+fn printNoteAnchor(ph &!PrintHelper, this &NoteAnchor) {
+  ph.out!.print("""<a class="{ph.ns("note-anchor note-color{this.id mod 6}")}" href="#note{this.id}" data-noteId="{this.id}">{this.id}</a>""");
 }
-fn printInlineNode(ph &PrintHelper, this &Compound impl InlineNode) {
+fn printInlineNode(ph &!PrintHelper, this &Compound impl InlineNode) {
   this.inners.each({ printInlineNode(ph, _) });
 }
 
@@ -456,7 +418,7 @@ fn printInlineNode(ph &PrintHelper, this &Compound impl InlineNode) {
 
 fn collectTextNodes(textNodes &List<StrSlice>, virtual this &InlineNode) abstract;
 fn collectTextNodes(textNodes &List<StrSlice>, this &Text impl InlineNode) {
-  textNodes.add(this.text);
+  textNodes!.add(this.text);
 }
 fn collectTextNodes(textNodes &List<StrSlice>, this &Compound impl InlineNode) {
   this.inners.each({ collectTextNodes(textNodes, _) });
@@ -474,56 +436,56 @@ fn collectTextNodes(textNodes &List<StrSlice>, this &NoteAnchor impl InlineNode)
 
 
 
-fn printList(ph &PrintHelper, list &PolyList) {
+fn printList(ph &!PrintHelper, list &PolyList) {
   if (list.style == "ordered") {
-    ph.out.println("""<ol class="{ph.ns("")}">""");
+    ph.out!.println("""<ol class="{ph.ns("")}">""");
   } else {
-    ph.out.println("""<ul class="{ph.ns("{list.style}")}">""");
+    ph.out!.println("""<ul class="{ph.ns("{list.style}")}">""");
   }
 
   list.members.each({ printListMember(ph, _); });
 
   if (list.style == "ordered") {
-    ph.out.println("</ol>");
+    ph.out!.println("</ol>");
   } else {
-    ph.out.println("</ul>");
+    ph.out!.println("</ul>");
   }
 }
-fn printListMember(ph &PrintHelper, virtual this &ListMember) abstract;
-fn printListMember(ph &PrintHelper, this &PolyList impl ListMember) {
+fn printListMember(ph &!PrintHelper, virtual this &ListMember) abstract;
+fn printListMember(ph &!PrintHelper, this &PolyList impl ListMember) {
   printList(ph, this);
 }
-fn printListMember(ph &PrintHelper, this &ListItem impl ListMember) {
-  ph.out.println("""<li class="{ph.ns("")}">""");
+fn printListMember(ph &!PrintHelper, this &ListItem impl ListMember) {
+  ph.out!.println("""<li class="{ph.ns("")}">""");
   printInlineNode(ph, this.contents);
-  ph.out.println("");
-  ph.out.println("</li>");
+  ph.out!.println("");
+  ph.out!.println("</li>");
 }
 
 
 
-fn printSlice(this &Slice, ph &PrintHelper) {
+fn printSlice(this &Slice, ph &!PrintHelper) {
   // End the contents div in the current slice
-  ph.out.println("""
+  ph.out!.println("""
       </div>
   """);
   first = not ph.printedFirstNotes;
   firstClass = if (first) { "first" } else { "" };
-  ph.out.println("""<div class="{ph.ns("slice-notes {firstClass}")}">""");
+  ph.out!.println("""<div class="{ph.ns("slice-notes {firstClass}")}">""");
 
   if (ph.metadata.layout == "annotated" and first) {
-    ph.out.println("""
+    ph.out!.println("""
       <nav class="{ph.ns("c-toc root")}">
       {if (ph.metadata.seriesName != "") { ph.metadata.seriesName } else { """<div class="{ph.ns("c-toc title")}">{ph.metadata.title}</div>""".slice() }}
     """);
     printList(ph, ph.tableOfContents);
-    ph.out.println("""
+    ph.out!.println("""
       </nav>
       <div class="{ph.ns("notes-first-header")}">Notes</div>
     """);
   }
   if (this.ids.len() > 0) {
-    ph.out.println("""
+    ph.out!.println("""
       <div class="{ph.ns("notes-container")}">
         <input type="checkbox" class="{ph.ns("toggle")}" id="toggle{ph.slicesPrinted}" />
 
@@ -536,10 +498,10 @@ fn printSlice(this &Slice, ph &PrintHelper) {
       vassert(
           this.noteContentsById.has(id),
           id + " not in notes?");
-      ph.out.println("""<span class="{ph.ns("note-preview when-collapsed note-color{id mod 6}")}">{id}</span>""");
+      ph.out!.println("""<span class="{ph.ns("note-preview when-collapsed note-color{id mod 6}")}">{id}</span>""");
     });
 
-    ph.out.println("""
+    ph.out!.println("""
         </label>
 
         <div class="{ph.ns("notes-contents")}">
@@ -552,19 +514,19 @@ fn printSlice(this &Slice, ph &PrintHelper) {
       noteContents =
           this.noteContentsById.get(id).get();
 
-      ph.out.println("""<div id="note{id}" class="{ph.ns("note")}" data-noteId="{id}">""");
-      ph.out.println("""<span class="{ph.ns("note-starter note-color{id mod 6}")}">{id}</span>""");
+      ph.out!.println("""<div id="note{id}" class="{ph.ns("note")}" data-noteId="{id}">""");
+      ph.out!.println("""<span class="{ph.ns("note-starter note-color{id mod 6}")}">{id}</span>""");
       printSection(ph, noteContents);
-      ph.out.println("</div>");
+      ph.out!.println("</div>");
     });
 
-    ph.out.println("""
+    ph.out!.println("""
         </div>
       </div>
     """);
   }
 
-  ph.out.println("</div>");
+  ph.out!.println("</div>");
   mut ph.slicesPrinted = ph.slicesPrinted + 1;
 
   if (this.newColor != "") {
@@ -572,7 +534,7 @@ fn printSlice(this &Slice, ph &PrintHelper) {
   }
 
   // End the current slice div, start a new one and start up a contents div
-  ph.out.println("""
+  ph.out!.println("""
     </div>
     <div class="{ph.ns("slice {ph.currentSlicesColor}")}">
       <div class="{ph.ns("slice-contents")}">

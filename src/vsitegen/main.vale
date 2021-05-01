@@ -20,7 +20,8 @@ fn main() export {
     page = parse(inFilepath);
 
     output = Output();
-    printPage(&output, valestromPath, &page);
+    tocRootList = makeTocRootList(&!page);
+    printPage(&!output, valestromPath, &page, &tocRootList);
 
     writeStringToFile(outFilepath, output.assembleStr());
   } else if (getMainArg(1) == "testvale") {
