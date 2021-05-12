@@ -146,9 +146,9 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
       executeProgramV2(
           ExecuteProgramArgs(
               "/tmp/vale/test",
-              Array<imm, str>(
+              MakeImmArray(
                   snippet.args.len(),
-                  &IFunction1<mut, int, str>((i){ snippet.args.get(i).str() })),
+                  &!(i){ snippet.args.get(i).str() }),
               // MakeImmArray(
               //     snippet.args.len(),
               //     (i){ snippet.args.get(i) }),
