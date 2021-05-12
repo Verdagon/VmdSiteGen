@@ -142,7 +142,7 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running test code!");
 
   // println("Running: /tmp/vale/test");
-  runResult = spawn("/tmp/vale/test", snippet.args).join(500);
+  runResult = spawn("/tmp/vale/test", &snippet.args).join(500);
   //runResult =
   //    executeProgramV2(
   //        ExecuteProgramArgs(
