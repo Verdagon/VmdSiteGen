@@ -342,17 +342,9 @@ fn printCodeItem(ph &!PrintHelper, this &CodeItem) {
   codeHtml =
     if (this.language == "vale") {
       writeStringToFile("/tmp/highlight{ph.codeSnippetsPrinted}.vale", this.code.str());
-      //command = "java -cp {ph.valestromPath}/Valestrom.jar net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale -oh /tmp/highlight{ph.codeSnippetsPrinted}.html";
-      command = "java";
-      args! = List<str>();
-      args!.add("-cp");
-      args!.add("{ph.valestromPath}/Valestrom.jar");
-      args!.add("net.verdagon.vale.driver.Driver");
-      args!.add("highlight");
-      args!.add("/tmp/highlight{ph.codeSnippetsPrinted}.vale");
-      args!.add("-oh");
-      args!.add("/tmp/highlight{ph.codeSnippetsPrinted}.html");
-      executeResult = spawn(command, &args).join(1000);
+      command = "java -cp {ph.valestromPath}/Valestrom.jar net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale --output-dir /tmp/highlight{ph.codeSnippetsPrinted}.html";
+      
+      executeResult = spawn(command).join(1000);
       if (executeResult.returnCode != 0) {
         panic(
             "Highlighting failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
