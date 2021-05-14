@@ -37,4 +37,4 @@ fn replaceAll(haystack! StrSlice, needle StrSlice, replacement StrSlice) StrSlic
   ret "".slice();
 }
 
-fn makeDirectory(path str) extern;
+// fn makeDirectory(path str) extern;

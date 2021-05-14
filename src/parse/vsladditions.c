@@ -268,17 +268,17 @@ void threadSleep(int seconds) {
 }
 
 
-void makeDirectory(ValeStr* path) {
-  struct stat st = {0};
-  // printf("making directory path size: %lld\n", path->length);
-  // printf("making directory path ptr: %p\n", path);
-  // printf("making directory path chars ptr: %p\n", path->chars);
-  // printf("making directory path end char int %d\n", path->chars[path->length]);
-  // printf("making directory: %s\n", path->chars);
-  if (stat(path->chars, &st) == -1) {
-      mkdir(path->chars, 0700);
-  } else {
-    // fprintf(stderr, "Directory already exists: %s\n", path->chars);
-  }
-  ValeReleaseMessage(path);
-}
+// void makeDirectory(ValeStr* path) {
+//   struct stat st = {0};
+//   // printf("making directory path size: %lld\n", path->length);
+//   // printf("making directory path ptr: %p\n", path);
+//   // printf("making directory path chars ptr: %p\n", path->chars);
+//   // printf("making directory path end char int %d\n", path->chars[path->length]);
+//   // printf("making directory: %s\n", path->chars);
+//   if (stat(path->chars, &st) == -1) {
+//       mkdir(path->chars, 0700);
+//   } else {
+//     // fprintf(stderr, "Directory already exists: %s\n", path->chars);
+//   }
+//   ValeReleaseMessage(path);
+// }
