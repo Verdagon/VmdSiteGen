@@ -6,6 +6,6 @@ git = "https://github.com/Verdagon/markvale"
 readme = "README.md"
 
 [[dependencies]]
-name = "collections"
+name = "stdlib"
 version = "0.1.0"
-allow_native = false
+allow_native = true

@@ -122,7 +122,7 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   buildCommand = "python3 {th.valestromPath}/valec.py build /tmp/vale/test.vale /tmp/vale/test.c -o /tmp/vale/test {extraArgs} --add-exports-include-path";
 
   // println("Building: {buildCommand}");
-  buildResult = executeProgram(buildCommand);
+  buildResult = spawn(buildCommand).join(1000);
   if (buildResult.returnCode != 0) {
     println("Couldn't build! Test:");
     println(vale);
@@ -142,20 +142,21 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running test code!");
 
   // println("Running: /tmp/vale/test");
-  runResult =
-      executeProgramV2(
-          ExecuteProgramArgs(
-              "/tmp/vale/test",
-              MakeImmArray(
-                  snippet.args.len(),
-                  &!(i){ snippet.args.get(i).str() }),
-              // MakeImmArray(
-              //     snippet.args.len(),
-              //     (i){ snippet.args.get(i) }),
-              stdin));
+  runResult = spawn("/tmp/vale/test", &snippet.args).join(500);
+  //runResult =
+  //    executeProgramV2(
+  //        ExecuteProgramArgs(
+  //            "/tmp/vale/test",
+  //            MakeImmArray(
+  //                snippet.args.len(),
+  //                &!(i){ snippet.args.get(i).str() }),
+  //            // MakeImmArray(
+  //            //     snippet.args.len(),
+  //            //     (i){ snippet.args.get(i) }),
+  //            stdin));
   // println("Stdout: " + runResult.stdout);
 
-  if (stdout.trim().len() > 0) {
+  if (runResult.stdout.trim().len() > 0) {
     if (runResult.stdout.trim() != stdout.trim()) {
       println("Program did not have expected output! Program:");
       println(vale);
