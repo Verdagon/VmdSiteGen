@@ -1,3 +1,6 @@
+import markvale.parse.*;
+import markvale.vsitegen.*;
+import stdlib.src.*;
 
 // fn doThing() int extern;
 
