@@ -1,6 +1,11 @@
 import markvale.parse.*;
 import markvale.vsitegen.*;
 import stdlib.src.*;
+import stdlib.src.collections.*;
+import stdlib.src.path.*;
+import stdlib.src.flagger.*;
+import stdlib.src.stringutils.*;
+import stdlib.src.command.*;
 
 // fn doThing() int extern;
 
@@ -26,13 +31,14 @@ fn main() export {
 
   if (getMainArg(1) == "build") {
     if (numMainArgs() < 5) {
-      println("Usage: " + getMainArg(0) + " build input.vmd output.html Valestrom.jar");
+      println("Usage: " + getMainArg(0) + " build Valestrom.jar input.vmd output.html ");
       ret void();
     }
 
     valestromPath = getMainArg(2);
-    inFilepath = getMainArg(3);
-    outFilepath = getMainArg(4);
+    stdlibPath = getMainArg(3);
+    inFilepath = getMainArg(4);
+    outFilepath = getMainArg(5);
 
     page = parse(inFilepath);
 
@@ -44,18 +50,19 @@ fn main() export {
   } else if (getMainArg(1) == "testvale") {
 
     if (numMainArgs() < 4) {
-      println("Usage: " + getMainArg(0) + " testvale input.vmd Valestrom.jar");
+      println("Usage: " + getMainArg(0) + " testvale Valestrom.jar path/to/stdlib input.vmd");
       ret void();
     }
 
     valestromPath = getMainArg(2);
-    inFilepath = getMainArg(3);
+    stdlibPath = getMainArg(3);
+    inFilepath = getMainArg(4);
 
     // println("doing testvale");
 
     page = parse(inFilepath);
 
-    testPage(valestromPath, &page);
+    testPage(valestromPath, stdlibPath, &page);
   } else {
     println("Unknown mode: " + getMainArg(0));
   }

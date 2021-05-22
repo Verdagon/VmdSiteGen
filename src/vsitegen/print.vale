@@ -348,7 +348,7 @@ fn printCodeItem(ph &!PrintHelper, this &CodeItem) {
       }else{
         mut valestrom = "{ph.valestromPath}/Valestrom.jar";
       }
-      command = "java -cp {valestrom} net.verdagon.vale.driver.Driver highlight /tmp/highlight{ph.codeSnippetsPrinted}.vale --output-dir /tmp/highlight{ph.codeSnippetsPrinted}.html";
+      command = "java -cp {valestrom} net.verdagon.vale.driver.Driver highlight mvtest mvtest:/tmp/highlight{ph.codeSnippetsPrinted}.vale --output-dir /tmp/highlight{ph.codeSnippetsPrinted}.html";
       executeResult = spawn(command).join(1000);
       if (executeResult.returnCode != 0) {
         panic(

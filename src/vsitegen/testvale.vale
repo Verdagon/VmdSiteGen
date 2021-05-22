@@ -1,12 +1,12 @@
 
 struct TestHelper {
   valestromPath str;
+  stdlibPath str;
 }
 
-
-fn testPage(valestromPath str, page &Page) {
+fn testPage(valestromPath str, stdlibPath str, page &Page) {
   // println("zork");
-  th = TestHelper(valestromPath);
+  th = TestHelper(valestromPath, stdlibPath);
   page.members.each({ testPageMember(&th, _); });
 }
 
@@ -88,8 +88,11 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   vale! = getCodeForLanguage(snippet, "vale".slice()).removeNotes();
   c = getCodeForLanguage(snippet, "c".slice()).removeNotes();
   stdin = getCodeForLanguage(snippet, "stdin".slice()).removeNotes();
-  stdout = getCodeForLanguage(snippet, "stdout".slice()).removeNotes();
+  expectedStdout = getCodeForLanguage(snippet, "stdout".slice()).removeNotes();
   
+  println("Program:");
+  println(vale);
+
   if (vale == "") {
     println("Skipping snippet, contains no Vale.");
     ret void();
@@ -119,7 +122,8 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   writeStringToFile("/tmp/vale/test.c", c);
   // println("Made files!");
 
-  buildCommand = "python3 {th.valestromPath}/valec.py build /tmp/vale/test.vale /tmp/vale/test.c -o /tmp/vale/test {extraArgs} --add-exports-include-path";
+  buildCommand = "python3 {th.valestromPath}/valec.py build mvtest mvtest:/tmp/vale/test.vale mvtest:/tmp/vale/test.c stdlib:{th.stdlibPath} -o /tmp/vale/test --add-exports-include-path {extraArgs}".trim().str();
+  println("Running: " + buildCommand);
 
   // println("Building: {buildCommand}");
   buildResult = spawn(buildCommand).join(1000);
@@ -142,7 +146,11 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running test code!");
 
   // println("Running: /tmp/vale/test");
-  runResult = spawn("/tmp/vale/test", &snippet.args).join(500);
+  process = spawn("/tmp/vale/test", &snippet.args);
+  if (stdin.trim().len() > 0) {
+    process.handle.write_child_stdin(stdin);
+  }
+  runResult = process.join(500);
   //runResult =
   //    executeProgramV2(
   //        ExecuteProgramArgs(
@@ -156,12 +164,11 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   //            stdin));
   // println("Stdout: " + runResult.stdout);
 
-  if (runResult.stdout.trim().len() > 0) {
-    if (runResult.stdout.trim() != stdout.trim()) {
-      println("Program did not have expected output! Program:");
-      println(vale);
+  if (expectedStdout.trim().len() > 0) {
+    if (runResult.stdout.trim() != expectedStdout.trim()) {
+      println("Program did not have expected output!");
       println("Expected:");
-      println(stdout.trim());
+      println(expectedStdout.trim());
       println("Actual:");
       println(runResult.stdout.trim());
       panic("Failed!");
