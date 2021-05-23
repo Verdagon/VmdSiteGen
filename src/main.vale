@@ -23,22 +23,42 @@ fn main() export {
   }
   all_args = all_args_list.toImmArray();
 
-  parse_all_flags(
-    [][
-      Flag("bork", FLAG_INT(), "bork bork bork", "booork", "--bork 5")
-    ],
-    all_args);
+  flags =
+      [][
+        Flag(
+          "--compiler_dir",
+          FLAG_STR(),
+          "Vale compiler directory.",
+          "~/Downloads/ValeCompiler",
+          "The path to the directory containing the Vale compiler. Used for syntax highlighting and testing vale code snippets."),
+        Flag(
+          "--stdlib_dir",
+          FLAG_STR(),
+          "Standard library compiler directory.",
+          "~/Downloads/stdlib",
+          "The path to the directory containing the standard library. Used for syntax highlighting and testing vale code snippets."),
+        Flag(
+          "--out",
+          FLAG_STR(),
+          "blork.",
+          "bork",
+          "mork mork mork")];
 
-  if (getMainArg(1) == "build") {
-    if (numMainArgs() < 5) {
-      println("Usage: " + getMainArg(0) + " build Valestrom.jar input.vmd output.html ");
-      ret void();
+  parsed_flags = parse_all_flags(&flags, all_args);
+
+  if (parsed_flags.invalid_flags.len() < 1) {
+    panic("Must specify a command (build or testvale).");
+  }
+
+  if (parsed_flags.invalid_flags.get(0) == "build") {
+    valestromPath = expect_string_flag(&flags, &parsed_flags, "--compiler_dir");
+    stdlibPath = expect_string_flag(&flags, &parsed_flags, "--stdlib_dir");
+    outFilepath = expect_string_flag(&flags, &parsed_flags, "--out");
+
+    if (parsed_flags.invalid_flags.len() < 2) {
+      panic("Must specify an input filename.");
     }
-
-    valestromPath = getMainArg(2);
-    stdlibPath = getMainArg(3);
-    inFilepath = getMainArg(4);
-    outFilepath = getMainArg(5);
+    inFilepath = parsed_flags.invalid_flags.get(1);
 
     page = parse(inFilepath);
 
@@ -47,16 +67,15 @@ fn main() export {
     printPage(&!output, valestromPath, &page, &tocRootList);
 
     writeStringToFile(outFilepath, output.assembleStr());
-  } else if (getMainArg(1) == "testvale") {
+  } else if (parsed_flags.invalid_flags.get(0) == "testvale") {
+    valestromPath = expect_string_flag(&flags, &parsed_flags, "--compiler_dir");
+    stdlibPath = expect_string_flag(&flags, &parsed_flags, "--stdlib_dir");
 
-    if (numMainArgs() < 4) {
-      println("Usage: " + getMainArg(0) + " testvale Valestrom.jar path/to/stdlib input.vmd");
-      ret void();
+    if (parsed_flags.invalid_flags.len() < 2) {
+      panic("Must specify an input filename.");
     }
+    inFilepath = parsed_flags.invalid_flags.get(1);
 
-    valestromPath = getMainArg(2);
-    stdlibPath = getMainArg(3);
-    inFilepath = getMainArg(4);
 
     // println("doing testvale");
 
