@@ -155,7 +155,7 @@ PolyList {
   openLists = List<&PolyList>();
   openLists!.add(&rootList);
 
-  while ((continueF)(iter) and iter!.nextIsListItem(style)) {
+  while (continueF!(iter) and iter!.nextIsListItem(style)) {
     iter!.skipNewlines();
     thisListItemIndentation! = 1;
     while (iter!.skipIfNext("   ")) {
@@ -178,7 +178,7 @@ PolyList {
             &!notesCollector,
             &!iter,
             &!IFunction1<mut, &!InputIter, bool>((iter){
-              ret (continueF)(iter) and not iter.nextIs("\n");
+              ret continueF!(iter) and not iter.nextIs("\n");
             }));
     openLists!.get(openLists.len() - 1).members!.add(ListItem(lineContents));
   }
@@ -194,7 +194,7 @@ fn parseQuote(
 Quote {
   inlines = List<InlineNode>();
 
-  while ((continueF)(iter) and iter.nextIs("> ")) {
+  while (continueF!(iter) and iter.nextIs("> ")) {
     iter!.skipExpect("> ");
 
     lineContents =
@@ -202,7 +202,7 @@ Quote {
             &!notesCollector,
             &!iter,
             &!IFunction1<mut, &!InputIter, bool>((iter){
-              ret (continueF)(iter) and not iter.nextIs("\n");
+              ret continueF!(iter) and not iter.nextIs("\n");
             }));
     while (lineContents.inners.len() > 0) {
       inlines!.add(lineContents.inners!.remove(0));
@@ -219,7 +219,7 @@ fn parseCallout(
 Callout {
   inlines = List<InlineNode>();
 
-  while ((continueF)(iter) and iter.nextIs("! ")) {
+  while (continueF!(iter) and iter.nextIs("! ")) {
     iter!.skipExpect("! ");
 
     lineContents =
@@ -227,7 +227,7 @@ Callout {
             &!notesCollector,
             &!iter,
             &!IFunction1<mut, &!InputIter, bool>((iter){
-              ret (continueF)(iter) and not iter.nextIs("\n");
+              ret continueF!(iter) and not iter.nextIs("\n");
             }));
     while (lineContents.inners.len() > 0) {
       inlines!.add(lineContents.inners!.remove(0));
@@ -259,13 +259,13 @@ Split {
 
     columnSections = List<Section>();
 
-    while ((innerContinueF)(iter)) {
+    while (innerContinueF!(iter)) {
       columnSections!.add(
           parseSection(
               &!notesCollector,
               &!iter,
               &!IFunction1<mut, &!InputIter, bool>((iter){
-                ret (innerContinueF)(iter) and not iter.nextIs("\n\n\n");
+                ret innerContinueF!(iter) and not iter.nextIs("\n\n\n");
               })));
       iter!.skipNewlines();
     }
@@ -314,7 +314,7 @@ Slice {
           ret not iter.nextIs("</slice>");
         });
 
-    while ((continueF)(iter)) {
+    while (continueF!(iter)) {
       iter!.skipNewlines();
       iter!.skipExpect("#");
       noteId = iter!.getUntilExpected(":");
@@ -324,7 +324,7 @@ Slice {
               &!notesCollector,
               &!iter,
               &!IFunction1<mut, &!InputIter, bool>((iter){
-                ret (continueF)(iter) and not iter!.nextIsNoteBegin();
+                ret continueF!(iter) and not iter!.nextIsNoteBegin();
               }));
       iter!.skipNewlines();
       notesCollector!.addSeparateNote(noteId, noteOutput);
@@ -372,7 +372,7 @@ Compound {
 
   running! = true;
   while (running and iter.hasNext()) {
-    if (not (continueF)(iter)) {
+    if (not continueF!(iter)) {
       mut running = false;
     } else {
       maybeInner = parseInlineNode(notesCollector, iter);
@@ -380,9 +380,9 @@ Compound {
         if (currentTextNode != "") {
           inners!.add(Text(mut currentTextNode = "".slice()));
         }
-        inners!.add(maybeInner^.get());
+        inners!.add((maybeInner).get());
       } else {
-        maybeInner^.drop();
+        (maybeInner).drop();
         mut currentTextNode = (currentTextNode + iter!.getNext()).slice();
       }
     }
@@ -453,7 +453,7 @@ InlineNode {
     &!notesCollector,
     &!iter,
     &!IFunction1<mut, &!InputIter, bool>((iter){
-      ret (continueF)(iter) and iter.hasNext();
+      ret continueF!(iter) and iter.hasNext();
     }));
 }
 
@@ -467,7 +467,7 @@ StrSlice {
 
   running! = true;
   while (running and iter.hasNext()) {
-    if (not (continueF)(iter)) {
+    if (not continueF!(iter)) {
       mut running = false;
     } else {
       mut code = (code + iter!.getNext()).slice();
@@ -655,7 +655,7 @@ fn parseSection(
 Section {
   sectionMembers = List<SectionMember>();
 
-  while ((continueF)(iter)) {
+  while (continueF!(iter)) {
     iter!.skipNewlines();
 
     if (iter.nextIs("```")) {
@@ -681,7 +681,7 @@ Section {
               &!notesCollector,
               &!iter,
               &!IFunction1<mut, &!InputIter, bool>((iter){
-                ret (continueF)(iter) and not iter.nextIs("\n\n");
+                ret continueF!(iter) and not iter.nextIs("\n\n");
               })));
     } else if (iter.nextIs("> ")) {
       sectionMembers!.add(
@@ -689,7 +689,7 @@ Section {
               &!notesCollector,
               &!iter,
               &!IFunction1<mut, &!InputIter, bool>((iter){
-                ret (continueF)(iter) and not iter.nextIs("\n\n");
+                ret continueF!(iter) and not iter.nextIs("\n\n");
               })));
     } else if (iter.nextIs("! ")) {
       sectionMembers!.add(
@@ -697,7 +697,7 @@ Section {
               &!notesCollector,
               &!iter,
               &!IFunction1<mut, &!InputIter, bool>((iter){
-                ret (continueF)(iter) and not iter.nextIs("\n\n");
+                ret continueF!(iter) and not iter.nextIs("\n\n");
               })));
     } else {
       inlineNode =
@@ -705,7 +705,7 @@ Section {
               &!notesCollector,
               &!iter,
               &!IFunction1<mut, &!InputIter, bool>((iter){
-                ret (continueF)(iter) and not iter.nextIs("\n\n");
+                ret continueF!(iter) and not iter.nextIs("\n\n");
               }));
       sectionMembers!.add(Paragraph(inlineNode));
     }

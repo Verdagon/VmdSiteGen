@@ -1,11 +1,11 @@
 import markvale.parse.*;
 import markvale.vsitegen.*;
-import stdlib.src.*;
-import stdlib.src.collections.*;
-import stdlib.src.path.*;
-import stdlib.src.flagger.*;
-import stdlib.src.stringutils.*;
-import stdlib.src.command.*;
+import stdlib.*;
+import stdlib.collections.*;
+import stdlib.path.*;
+import stdlib.flagger.*;
+import stdlib.stringutils.*;
+import stdlib.command.*;
 
 // fn doThing() int extern;
 

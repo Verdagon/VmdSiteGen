@@ -6,7 +6,7 @@ fn replaceAll(haystack! StrSlice, needle StrSlice, replacement StrSlice) StrSlic
       mut result = result + haystack;
       ret result.slice();
     }
-    (initial, rest) = maybeSplit^.get();
+    (initial, rest) = (maybeSplit).get();
     mut result = result + initial + replacement;
     mut haystack = rest;
   }
