@@ -371,7 +371,7 @@ fn printCodeItem(ph &!PrintHelper, this &CodeItem) {
 }
 
 fn printWithChevronNotes(ph &!PrintHelper, s StrSlice) {
-  iter = InputIter(s, true);
+  iter = ParseIter(s, true);
   while (iter.hasNext()) {
     if (iter!.skipIfNext("«")) {
       // Parser should have replaced the name with an id, like «mynote» to «13».

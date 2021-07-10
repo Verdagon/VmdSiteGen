@@ -64,7 +64,7 @@ fn getCodeForLanguage(codeSnippet &CodeSnippet, language StrSlice) StrSlice {
 }
 
 fn removeNotes(s StrSlice) str {
-  iter = InputIter(s, true);
+  iter = ParseIter(s, true);
   result! = "";
   while (iter.hasNext()) {
     if (iter!.skipIfNext("«")) {
