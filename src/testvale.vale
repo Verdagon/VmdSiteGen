@@ -126,7 +126,7 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   println("Running: " + buildCommand);
 
   // println("Building: {buildCommand}");
-  buildResult = spawn(buildCommand).join(1000);
+  buildResult = (spawn(buildCommand)).capture_and_join();
   if (buildResult.returnCode != 0) {
     println("Couldn't build! Test:");
     println(vale);
@@ -148,9 +148,9 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running: /tmp/vale/test");
   process = spawn("/tmp/vale/test", &snippet.args);
   if (stdin.trim().len() > 0) {
-    process.handle.write_child_stdin(stdin);
+    process.handle.write_stdin(stdin);
   }
-  runResult = process.join(500);
+  runResult = (process).capture_and_join();
   //runResult =
   //    executeProgramV2(
   //        ExecuteProgramArgs(

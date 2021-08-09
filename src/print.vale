@@ -349,7 +349,7 @@ fn printCodeItem(ph &!PrintHelper, this &CodeItem) {
         mut valestrom = "{ph.valestromPath}/Valestrom.jar";
       }
       command = "java -cp {valestrom} net.verdagon.vale.driver.Driver highlight mvtest mvtest:/tmp/highlight{ph.codeSnippetsPrinted}.vale --output-dir /tmp/highlight{ph.codeSnippetsPrinted}.html";
-      executeResult = spawn(command).join(1000);
+      executeResult = (spawn(command)).capture_and_join();
       if (executeResult.returnCode != 0) {
         panic(
             "Highlighting failed:\n" + executeResult.stdout + "\n" + executeResult.stderr);
