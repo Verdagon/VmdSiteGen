@@ -1,41 +1,43 @@
 
-fn wrapTocInSeriesList(page &!Page, tocRootList PolyList) PolyList {
+func wrapTocInSeriesList(page &Page, tocRootList PolyList) PolyList {
   if (page.metadata.seriesEntries.len() > 0) {
     seriesList = PolyList("bullet", List<ListMember>());
 
-    while (page.metadata.seriesEntries.len() > 0 and
-        (page.metadata.seriesEntries.get(0).text != "" or
-            page.metadata.seriesEntries.get(0).url != "")) {
-      seriesList.members!.add(ListItem(page.metadata.seriesEntries!.remove(0)));
+    index = 0;
+    while (index < page.metadata.seriesEntries.len() and
+        (page.metadata.seriesEntries.get(index).text != "" or
+            page.metadata.seriesEntries.get(index).url != "")) {
+      seriesList.members.add(ListItem(page.metadata.seriesEntries.get(index).clone()));
+      set index = index + 1;
     }
 
     vassert(page.metadata.seriesEntries.len() > 0, "wat bork");
-    link = page.metadata.seriesEntries!.remove(0);
+    link = page.metadata.seriesEntries.get(index);
+    set index = index + 1;
     vassert(link.text == "" and link.url == "", "wat zork");
-    seriesList.members!.add(ListItem(Bold(Text(slice(page.metadata.title + " *")))));
-    seriesList.members!.add(tocRootList);
+    seriesList.members.add(ListItem(Bold(Text(slice(page.metadata.title + " *")))));
+    seriesList.members.add(tocRootList);
 
-    while (page.metadata.seriesEntries.len() > 0 and
-        (page.metadata.seriesEntries.get(0).text != "" or
-            page.metadata.seriesEntries.get(0).url != "")) {
-      seriesList.members!.add(ListItem(page.metadata.seriesEntries!.remove(0)));
+    while (index < page.metadata.seriesEntries.len()) {
+      seriesList.members.add(ListItem(page.metadata.seriesEntries.get(index).clone()));
+      set index = index + 1;
     }
 
-    ret seriesList;
+    return seriesList;
   } else {
-    ret tocRootList;
+    return tocRootList;
   }
 }
 
-fn makeTocRootList(page &!Page) PolyList {
+func makeTocRootList(page &Page) PolyList {
   unSeriesdTocRootList = PolyList("bullet", List<ListMember>());
 
   // A stack of all the currently open lists.
   openTocLists = List<&PolyList>();
-  openTocLists!.add(&unSeriesdTocRootList);
-  page.members.each({ populateTableOfContents(&openTocLists, _); });
+  openTocLists.add(&unSeriesdTocRootList);
+  page.members.each(&{ populateTableOfContents(&openTocLists, &_); });
   drop(openTocLists);
 
   tocRootList = wrapTocInSeriesList(page, unSeriesdTocRootList);
-  ret tocRootList;
+  return tocRootList;
 }

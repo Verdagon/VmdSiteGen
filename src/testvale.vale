@@ -1,91 +1,91 @@
 
 struct TestHelper {
-  valestromPath str;
-  stdlibPath str;
+  frontendPath str;
 }
 
-fn testPage(valestromPath str, stdlibPath str, page &Page) {
+func testPage(frontendPath str, page &Page) {
   // println("zork");
-  th = TestHelper(valestromPath, stdlibPath);
-  page.members.each({ testPageMember(&th, _); });
+  th = TestHelper(frontendPath);
+  members &List<PageMember> = page.members;
+  foreach m in members { testPageMember(&th, &m); }
 }
 
-fn testPageMember(th &TestHelper, virtual this &PageMember) abstract;
-fn testPageMember(th &TestHelper, this &Slice impl PageMember) { 
+abstract func testPageMember(th &TestHelper, virtual this &PageMember);
+func testPageMember(th &TestHelper, this &Slice) { 
   // println("zork");
 }
-fn testPageMember(th &TestHelper, this &Section impl PageMember) {
+func testPageMember(th &TestHelper, this &Section) {
   // println("zork");
   testSection(th, this);
 }
-fn testSection(th &TestHelper, this &Section) {
+func testSection(th &TestHelper, this &Section) {
   // println("zork");
-  this.members.each({ testSectionMember(th, _) });
+  foreach x in this.members { testSectionMember(th, x); }
 }
 
-fn testSectionMember(th &TestHelper, virtual this &SectionMember) abstract;
-fn testSectionMember(th &TestHelper, this &Header impl SectionMember) { 
+abstract func testSectionMember(th &TestHelper, virtual this &SectionMember);
+func testSectionMember(th &TestHelper, this &Header) { 
   // println("zork");
 }
-fn testSectionMember(th &TestHelper, this &PolyList impl SectionMember) { 
+func testSectionMember(th &TestHelper, this &PolyList) { 
   // println("zork");
 }
-fn testSectionMember(th &TestHelper, this &Paragraph impl SectionMember) { 
+func testSectionMember(th &TestHelper, this &Paragraph) { 
   // println("zork");
 }
-fn testSectionMember(th &TestHelper, this &Split impl SectionMember) {
+func testSectionMember(th &TestHelper, this &Split) {
   // println("zork");
-  this.columns.each((columnSections){
+  foreach columnSections in this.columns {
   // println("gork");
     th2 = th;
-    columnSections.each((s){ testSection(th2, s); });
-  });
+    foreach s in columnSections { testSection(th2, s); }
+  }
 }
-fn testSectionMember(th &TestHelper, this &Quote impl SectionMember) { 
+func testSectionMember(th &TestHelper, this &Quote) { 
   // println("gork");
 }
-fn testSectionMember(th &TestHelper, this &Callout impl SectionMember) { 
+func testSectionMember(th &TestHelper, this &Callout) { 
   // println("gork");
 }
-fn testSectionMember(th &TestHelper, this &CodeSnippet impl SectionMember) {
+func testSectionMember(th &TestHelper, this &CodeSnippet) {
   // println("gork");
   testCode(th, this);
 }
 
-fn getCodeForLanguage(codeSnippet &CodeSnippet, language StrSlice) StrSlice {
+func getCodeForLanguage(codeSnippet &CodeSnippet, language StrSlice) StrSlice {
   // println("gork");
-  code! = "".slice();
-  each (codeSnippet.items) (item){
+  code = "".slice();
+  foreach item in codeSnippet.items {
     if (item.language == language) {
-      mut code = slice(code + item.code);
+      set code = slice(code + item.code);
     }
   }
-  ret code;
+  return code;
 }
 
-fn removeNotes(s StrSlice) str {
-  iter = ParseIter(s, true);
-  result! = "";
+func removeNotes(s StrSlice) str {
+  iter = ParseIter(s);
+  result = "";
   while (iter.hasNext()) {
-    if (iter!.skipIfNext("«")) {
+    if (iter.skipIfNext("«")) {
       // Parser should have replaced the name with an id, like «mynote» to «13».
-      iter!.getUntilExpected("»");
+      iter.getUntilExpected("»");
     } else {
-      mut result = result + iter!.getNext();
+      set result = result + iter.getNext();
     }
   }
-  ret result;
+  return result;
 }
 
-fn testCode(th &TestHelper, snippet &CodeSnippet) {
+func testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("ork");
   if (snippet.args.len() > 0 and snippet.args.get(0) == "notest") {
-    ret void();
+    return void();
   }
 
   // println("in testcode!");
 
-  vale! = getCodeForLanguage(snippet, "vale".slice()).removeNotes();
+  vale = getCodeForLanguage(snippet, "vale".slice()).removeNotes();
   c = getCodeForLanguage(snippet, "c".slice()).removeNotes();
   stdin = getCodeForLanguage(snippet, "stdin".slice()).removeNotes();
   expectedStdout = getCodeForLanguage(snippet, "stdout".slice()).removeNotes();
@@ -95,20 +95,20 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
 
   if (vale == "") {
     println("Skipping snippet, contains no Vale.");
-    ret void();
+    return void();
   } else {
     println("Testing!");
   }
 
   // println("bork!");
 
-  extraArgs! = "";
-  each (snippet.args) (arg){
+  extraArgs = "";
+  foreach arg in snippet.args {
     // println("arg: " + arg);
     if (arg.startsWith("`")) {
-      mut vale = vale + "\n" + arg.slice(1, arg.len() - 1) + "\n";
+      set vale = vale + "\n" + arg.slice(1, arg.len() - 1) + "\n";
     } else {
-      mut extraArgs = " " + th.valestromPath + "/" + arg;
+      set extraArgs = " " + th.frontendPath + "/" + arg;
     }
   }
 
@@ -116,18 +116,18 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println(vale);
 
   // println("Making directory!");
-  makeDirectory("/tmp/vale");
+  "/tmp/vale".Path()&.CreateDir(true);
   // println("Made directory!");
-  writeStringToFile("/tmp/vale/test.vale", vale);
-  writeStringToFile("/tmp/vale/test.c", c);
+  "/tmp/vale/test.vale".Path()&.writeString(vale);
+  "/tmp/vale/test.c".Path()&.writeString(c);
   // println("Made files!");
 
-  buildCommand = "python3 {th.valestromPath}/valec.py build mvtest mvtest:/tmp/vale/test.vale mvtest:/tmp/vale/test.c stdlib:{th.stdlibPath} -o /tmp/vale/test --add-exports-include-path {extraArgs}".trim().str();
+  buildCommand = "{th.frontendPath}/valec build mvtest=/tmp/vale/test.vale mvtest=/tmp/vale/test.c --output_dir /tmp/valebuild -o test {extraArgs}".trim().str();
   println("Running: " + buildCommand);
 
   // println("Building: {buildCommand}");
-  buildResult = (spawn(buildCommand)).capture_and_join();
-  if (buildResult.returnCode != 0) {
+  buildResult = ((Subprocess(buildCommand)).expect()).capture_and_join();
+  if (buildResult.return_code != 0) {
     println("Couldn't build! Test:");
     println(vale);
     println("Stdout:");
@@ -146,8 +146,10 @@ fn testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running test code!");
 
   // println("Running: /tmp/vale/test");
-  process = spawn("/tmp/vale/test", &snippet.args);
+  process = (Subprocess("/tmp/valebuild/test", &snippet.args)).expect();
   if (stdin.trim().len() > 0) {
+    println("Giving stdin:");
+    println(stdin);
     process.handle.write_stdin(stdin);
   }
   runResult = (process).capture_and_join();

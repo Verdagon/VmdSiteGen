@@ -2,42 +2,38 @@ import parseiter.*;
 import vmdparse.*;
 import vmdsitegen.*;
 import stdlib.*;
-import stdlib.collections.*;
+import stdlib.collections.hashmap.*;
+import stdlib.collections.hashset.*;
+import stdlib.collections.list.*;
 import stdlib.path.*;
 import stdlib.flagger.*;
 import stdlib.stringutils.*;
 import stdlib.command.*;
 
-// fn doThing() int extern;
+// func doThing() int extern;
 
-fn main() export {
+exported func main() {
   if (numMainArgs() < 2) {
     println("Usage: " + getMainArg(0) + " [build|testvale]");
-    ret void();
+    return void();
   }
 
   all_args_list = List<str>();
-  i! = 0;
+  i = 0;
   while (i < numMainArgs()) {
-    all_args_list!.add(getMainArg(i));
+    all_args_list.add(getMainArg(i));
     mut i = i + 1;
   }
   all_args = all_args_list.toImmArray();
 
   flags =
-      [][
+      [#][
         Flag(
           "--compiler_dir",
           FLAG_STR(),
           "Vale compiler directory.",
           "~/Downloads/ValeCompiler",
           "The path to the directory containing the Vale compiler. Used for syntax highlighting and testing vale code snippets."),
-        Flag(
-          "--stdlib_dir",
-          FLAG_STR(),
-          "Standard library compiler directory.",
-          "~/Downloads/stdlib",
-          "The path to the directory containing the standard library. Used for syntax highlighting and testing vale code snippets."),
         Flag(
           "--out",
           FLAG_STR(),
@@ -47,42 +43,40 @@ fn main() export {
 
   parsed_flags = parse_all_flags(&flags, all_args);
 
-  if (parsed_flags.invalid_flags.len() < 1) {
+  if (parsed_flags.unrecognized_inputs.len() < 1) {
     panic("Must specify a command (build or testvale).");
   }
 
-  if (parsed_flags.invalid_flags.get(0) == "build") {
-    valestromPath = expect_string_flag(&flags, &parsed_flags, "--compiler_dir");
-    stdlibPath = expect_string_flag(&flags, &parsed_flags, "--stdlib_dir");
-    outFilepath = expect_string_flag(&flags, &parsed_flags, "--out");
+  if (parsed_flags.unrecognized_inputs.get(0) == "build") {
+    frontendPath = expect_string_flag(&parsed_flags, &flags, "--compiler_dir");
+    outFilepath = expect_string_flag(&parsed_flags, &flags, "--out");
 
-    if (parsed_flags.invalid_flags.len() < 2) {
+    if (parsed_flags.unrecognized_inputs.len() < 2) {
       panic("Must specify an input filename.");
     }
-    inFilepath = parsed_flags.invalid_flags.get(1);
+    inFilepath = parsed_flags.unrecognized_inputs.get(1);
 
     page = parse(inFilepath);
 
     output = Output();
-    tocRootList = makeTocRootList(&!page);
-    printPage(&!output, valestromPath, &page, &tocRootList);
+    tocRootList = makeTocRootList(&page);
+    printPage(&output, frontendPath, &page, &tocRootList);
 
     writeStringToFile(outFilepath, output.assembleStr());
-  } else if (parsed_flags.invalid_flags.get(0) == "testvale") {
-    valestromPath = expect_string_flag(&flags, &parsed_flags, "--compiler_dir");
-    stdlibPath = expect_string_flag(&flags, &parsed_flags, "--stdlib_dir");
+  } else if (parsed_flags.unrecognized_inputs.get(0) == "testvale") {
+    frontendPath = expect_string_flag(&parsed_flags, &flags, "--compiler_dir");
 
-    if (parsed_flags.invalid_flags.len() < 2) {
+    if (parsed_flags.unrecognized_inputs.len() < 2) {
       panic("Must specify an input filename.");
     }
-    inFilepath = parsed_flags.invalid_flags.get(1);
+    inFilepath = parsed_flags.unrecognized_inputs.get(1);
 
 
     // println("doing testvale");
 
     page = parse(inFilepath);
 
-    testPage(valestromPath, stdlibPath, &page);
+    testPage(frontendPath, &page);
   } else {
     println("Unknown mode: " + getMainArg(0));
   }

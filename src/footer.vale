@@ -1,13 +1,21 @@
 
-fn blogFooter() str {
-  ret """
+func blogFooter(blog bool) str {
+  return """
     <div class="c-footer root">
       <div class="c-footer copyright">
-        Copyright © 2020 Evan Ovadia - Previously known as GelLLVM
+        Copyright © 2020 Evan Ovadia {if blog { "" } else { "- Previously known as GelLLVM" }} 
       </div>
+  """ +
+  (if blog {
+    ""
+  } else {
+    """
       <div class="c-footer everest">
         (Not to be confused with Project Everest's <a href="https:\/\/github.com/project-everest/vale">VALE: Verified Assembly Language for Everest</a>)
       </div>
+    """
+  }) +
+  """
     </div>
   """;
 }

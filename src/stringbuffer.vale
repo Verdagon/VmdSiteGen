@@ -3,34 +3,34 @@
 struct Output {
   parts List<StrSlice>;
 }
-fn Output() Output {
+func Output() Output {
   Output(List<StrSlice>())
 }
-fn assembleStr(output &Output) str {
-  result! = "";
-  each (output.parts) (s){
-    mut result = result + s;
+func assembleStr(output &Output) str {
+  result = "";
+  foreach s in output.parts {
+    set result = result + s;
   }
-  ret result;
+  return result;
 }
-fn print(self &!Output, s str) {
-  self!.print(s.slice());
+func print(self &Output, s str) {
+  self.print(s.slice());
 }
-fn print(self &!Output, s StrSlice) {
-  self.parts!.add(s);
+func print(self &Output, s StrSlice) {
+  self.parts.add(s);
 }
-fn print(self &!Output, i int) {
-  self!.print(str(i).slice());
+func print(self &Output, i int) {
+  self.print(str(i).slice());
 }
-fn println(self &!Output, s str) {
-  self!.print(s);
-  self!.print("\n");
+func println(self &Output, s str) {
+  self.print(s);
+  self.print("\n");
 }
-fn println(self &!Output, s StrSlice) {
-  self!.print(s);
-  self!.print("\n");
+func println(self &Output, s StrSlice) {
+  self.print(s);
+  self.print("\n");
 }
-fn println(self &!Output, i int) {
-  self!.print(i);
-  self!.print("\n");
+func println(self &Output, i int) {
+  self.print(i);
+  self.print("\n");
 }
