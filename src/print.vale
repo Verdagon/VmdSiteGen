@@ -30,7 +30,7 @@ func copySeriesNextLink(page &Page) Opt<Link> {
     if (link.text == "" and link.url == "") {
       set foundThisPage = true;
     } else if (foundThisPage and seriesNextLink.isEmpty()) {
-      set seriesNextLink = Some(copy(&link));
+      set seriesNextLink = Some(clone(&link));
     }
   }
   return seriesNextLink;
@@ -44,7 +44,7 @@ func printPage(output &Output, frontendPath str, page &Page, tocRootList &PolyLi
   ph = PrintHelper(output, frontendPath, &page.metadata, false, &tocRootList, 0, 0, "".slice());
 
   csss =
-      page.metadata.cssFiles.map(&{
+      page.metadata.cssFiles.map<str>(&{
         """<link rel="stylesheet" type="text/css" href="{_}"/>"""
       })&.join();
 
@@ -158,7 +158,7 @@ body {
     link = seriesNextLink.get();
     inlines = List<InlineNode>();
     inlines.add(Bold(Text("Next: ".slice())));
-    inlines.add(Link(link.text, link.url));
+    inlines.add(Link(link.text, link.url, List<StrSlice>()));
     para = Paragraph(Compound(inlines));
     s = Section(List<SectionMember>());
     s.members.add(para);
@@ -350,7 +350,8 @@ func populateTableOfContents2(openTocLists &List<&PolyList>, header &Header) {
           ListItem(
               Link(
                   getHeaderText(header).slice(),
-                  ("#" + urlifyHeadingText(header)).slice())));
+                  ("#" + urlifyHeadingText(header)).slice(),
+                  List<StrSlice>())));
 }
 func populateTableOfContents2(openTocLists &List<&PolyList>, this &PolyList) { }
 func populateTableOfContents2(openTocLists &List<&PolyList>, this &Paragraph) { }
@@ -443,7 +444,7 @@ func printCodeItem(ph &PrintHelper, this &CodeItem) {
         set frontend = "{ph.frontendPath}/Frontend.jar";
       }
       command = "java -cp {frontend} dev.vale.passmanager.PassManager highlight mvtest=/tmp/highlight{ph.codeSnippetsPrinted}.vale --output_dir /tmp/highlight{ph.codeSnippetsPrinted}.html";
-      executeResult = ((Subprocess(command)).expect()).capture_and_join();
+      executeResult = ((Subprocess(command)).expect("bugger")).capture_and_join();
       if (executeResult.return_code != 0) {
         panic(
             "Highlighting command failed: {command}\n" + executeResult.stdout + "\n" + executeResult.stderr);

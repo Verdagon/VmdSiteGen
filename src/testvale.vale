@@ -126,7 +126,7 @@ func testCode(th &TestHelper, snippet &CodeSnippet) {
   println("Running: " + buildCommand);
 
   // println("Building: {buildCommand}");
-  buildResult = ((Subprocess(buildCommand)).expect()).capture_and_join();
+  buildResult = ((Subprocess(buildCommand)).expect("balls")).capture_and_join();
   if (buildResult.return_code != 0) {
     println("Couldn't build! Test:");
     println(vale);
@@ -146,7 +146,7 @@ func testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running test code!");
 
   // println("Running: /tmp/vale/test");
-  process = (Subprocess("/tmp/valebuild/test", &snippet.args)).expect();
+  process = (Subprocess("/tmp/valebuild/test", &snippet.args)).expect("fiddlesticks");
   if (stdin.trim().len() > 0) {
     println("Giving stdin:");
     println(stdin);

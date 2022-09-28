@@ -23,6 +23,7 @@ func blogHeader(blog bool) str {
             Sponsor us on GitHub!
           </a>
           <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
+          <a class="twitter" href="https:\/\/twitter.com/vale_pl">Twitter</a>
           <a class="discord" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
         </div>
       """
@@ -34,6 +35,7 @@ func blogHeader(blog bool) str {
           <a class="rss" href="/rss.xml">RSS</a>
           <a class="github" href="https:\/\/github.com/ValeLang/Vale">Github</a>
           <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
+          <a class="twitter" href="https:\/\/twitter.com/vale_pl">Twitter</a>
           <a class="discord" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
         </div>
       """
