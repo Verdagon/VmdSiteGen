@@ -36,6 +36,14 @@ func copySeriesNextLink(page &Page) Opt<Link> {
   return seriesNextLink;
 }
 
+/// take out
+func clone<E>(list &List<E>) List<E>
+where func clone(&E)E {
+  return List<E>(Array<mut, E>(list.len(), &(i) => { list.get(i).clone() }));
+}
+/// take out
+func clone(s StrSlice) StrSlice { s }
+
 
 func printPage(output &Output, frontendPath str, page &Page, tocRootList &PolyList) {
 
@@ -44,7 +52,8 @@ func printPage(output &Output, frontendPath str, page &Page, tocRootList &PolyLi
   ph = PrintHelper(output, frontendPath, &page.metadata, false, &tocRootList, 0, 0, "".slice());
 
   csss =
-      page.metadata.cssFiles.map<str>(&{
+///   page.metadata.cssFiles.map<str>(&{
+      page.metadata.cssFiles.map(&{
         """<link rel="stylesheet" type="text/css" href="{_}"/>"""
       })&.join();
 
@@ -502,7 +511,7 @@ func printInlineNode(ph &PrintHelper, this &InlineCode) {
   ph.out.print("</span>");
 }
 func printInlineNode(ph &PrintHelper, this &Link) {
-  ph.out.print("""<a class="{ph.ns("")}" href="{this.url}">{this.text}</a>""");
+  ph.out.print("""<a class="{ph.ns("")} {this.classes.join(" ")}" href="{this.url}">{this.text}</a>""");
 }
 func printInlineNode(ph &PrintHelper, this &NoteAnchor) {
   printNoteAnchor(ph, this);

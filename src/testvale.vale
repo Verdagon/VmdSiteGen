@@ -146,7 +146,7 @@ func testCode(th &TestHelper, snippet &CodeSnippet) {
   // println("Running test code!");
 
   // println("Running: /tmp/vale/test");
-  process = (Subprocess("/tmp/valebuild/test", &snippet.args)).expect("fiddlesticks");
+  process = (Subprocess("/tmp/valebuild/test", &snippet.args, None<str>())).expect("fiddlesticks");
   if (stdin.trim().len() > 0) {
     println("Giving stdin:");
     println(stdin);
