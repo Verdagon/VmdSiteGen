@@ -52,9 +52,9 @@ func printPage(output &Output, frontendPath str, page &Page, tocRootList &PolyLi
   ph = PrintHelper(output, frontendPath, &page.metadata, false, &tocRootList, 0, 0, "".slice());
 
   csss =
-///   page.metadata.cssFiles.map<str>(&{
-      page.metadata.cssFiles.map(&{
-        """<link rel="stylesheet" type="text/css" href="{_}"/>"""
+///   page.metadata.cssFiles.map(&{
+      page.metadata.cssFiles.map<StrSlice>(&{
+        """<link rel="stylesheet" type="text/css" href="{_}"/>""".slice()
       })&.join();
 
   ph.out.println("""
