@@ -100,11 +100,8 @@ body {
 
 <link href="https:\/\/fonts.googleapis.com/css?family=Lato|Roboto|Roboto+Mono" rel="stylesheet">
 
-<link rel="stylesheet" href="\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/styles/agate.min.css">
-<script src="\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/highlight.min.js"></script>
-<!-- and it's easy to individually load additional languages -->
-<script charset="UTF-8"
- src="https:\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/10.0.0/languages/go.min.js"></script>
+<link rel="stylesheet" href="https://highlightjs.org/static/demo/styles/atom-one-dark-reasonable.css">
+<script src="\/\/cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 
 <!-- The core Firebase JS SDK is always required and must be listed first -->
 <script src="https:\/\/www.gstatic.com/firebasejs/8.2.2/firebase-app.js"></script>
@@ -185,6 +182,7 @@ body {
 
   {blogFooter(ph.metadata.realm == "blog")}
   <script src="/components/annotated.js"></script>
+  <script>hljs.highlightAll();</script>
 </body>
 </html>
   """);
@@ -439,9 +437,9 @@ func printCodeItem(ph &PrintHelper, this &CodeItem) {
   langClass = if (this.language.len() > 0) { "language-" + this.language } else { "" };
 
   ph.out.print("""
-    <div class="{ph.ns("c-snippet root {langClass}")}">
+    <div class="{ph.ns("c-snippet root")}">
       <div class="{ph.ns("c-snippet header")}">{this.language}</div>
-      <div class="{ph.ns("c-snippet code")}">""");
+      <pre class="{ph.ns("c-snippet pre")}"><code class="{ph.ns("c-snippet code")} {langClass}">""");
 
   codeHtml =
     if (this.language == "vale") {
@@ -469,7 +467,7 @@ func printCodeItem(ph &PrintHelper, this &CodeItem) {
   printWithChevronNotes(ph, codeHtml.slice());
 
   ph.out.println(
-   """</div>
+   """</code></pre>
     </div>
   """);
 }
