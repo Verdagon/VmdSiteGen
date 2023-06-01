@@ -34,11 +34,8 @@ func testSectionMember(th &TestHelper, this &Paragraph) {
   // println("zork");
 }
 func testSectionMember(th &TestHelper, this &Split) {
-  // println("zork");
-  foreach columnSections in this.columns {
-  // println("gork");
-    th2 = th;
-    foreach s in columnSections { testSection(th2, s); }
+  foreach column in this.columns {
+    testColumn(th, column);
   }
 }
 func testSectionMember(th &TestHelper, this &Quote) { 
@@ -50,6 +47,12 @@ func testSectionMember(th &TestHelper, this &Callout) {
 func testSectionMember(th &TestHelper, this &CodeSnippet) {
   // println("gork");
   testCode(th, this);
+}
+
+func testColumn(th &TestHelper, this &Column) {
+  foreach s in this.sections {
+    testSection(th, s);
+  }
 }
 
 func getCodeForLanguage(codeSnippet &CodeSnippet, language StrSlice) StrSlice {

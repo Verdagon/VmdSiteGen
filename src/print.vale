@@ -404,13 +404,14 @@ func printSectionMember(ph &PrintHelper, this &Paragraph) {
   ph.out.println("</p>");
 }
 func printSectionMember(ph &PrintHelper, this &Split) {
-  ph.out.println("""<div class="{ph.ns("split")}">""");
+  alternatingClass = if this.alternating { ph.ns("split-alternating") } else { ph.ns("split-horizontal") };
 
-  foreach columnSections in this.columns {
-    ph2 = ph;
-    ph.out.println("""<div class="{ph.ns("split-column")}">""");
-    foreach s in columnSections { printSection(ph2, s); }
-    ph.out.println("""</div>""");
+  ph.out.println("""<div class="{ph.ns("split")} {alternatingClass}">""");
+
+  first = true;
+  foreach column in this.columns {
+    printColumn(ph, this.alternating, column, first);
+    set first = false;
   }
 
   ph.out.println("""</div>""");
@@ -431,6 +432,16 @@ func printSectionMember(ph &PrintHelper, this &CodeSnippet) {
   foreach i in this.items {
     printCodeItem(ph, i);
   }
+}
+
+func printColumn(ph &PrintHelper, alternating bool, this &Column, first bool) {
+  alternatingClass = if alternating { ph.ns("split-alternating") } else { ph.ns("split-horizontal") };
+  directionClass = if this.rightward { ph.ns("split-rightward") } else { ph.ns("split-leftward") };
+  firstClass = if first { ph.ns("split-first") } else { "" };
+
+  ph.out.println("""<div class="{ph.ns("split-column")} {alternatingClass} {directionClass} {firstClass}">""");
+  foreach s in this.sections { printSection(ph, s); }
+  ph.out.println("""</div>""");
 }
 
 func printCodeItem(ph &PrintHelper, this &CodeItem) {
