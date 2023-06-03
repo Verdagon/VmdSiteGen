@@ -1,6 +1,7 @@
 
 struct PrintHelper {
   out &Output;
+  root Path;
   frontendPath str;
   metadata &Metadata;
   printedFirstNotes! bool;
@@ -45,11 +46,11 @@ where func clone(&E)E {
 func clone(s StrSlice) StrSlice { s }
 
 
-func printPage(output &Output, frontendPath str, page &Page, tocRootList &PolyList) {
+func printPage(output &Output, root &Path, frontendPath str, page &Page, tocRootList &PolyList) {
 
   seriesNextLink = copySeriesNextLink(&page);
 
-  ph = PrintHelper(output, frontendPath, &page.metadata, false, &tocRootList, 0, 0, "".slice());
+  ph = PrintHelper(output, root.clone(), frontendPath, &page.metadata, false, &tocRootList, 0, 0, "".slice());
 
   csss =
 ///   page.metadata.cssFiles.map(&{
@@ -130,8 +131,11 @@ body {
 
 </head>
 <body>
-  {blogHeader(ph.metadata.realm == "blog")}
+  """);
 
+  printBlogHeader(&ph);
+
+  ph.out.println("""
   <div class="{ph.ns("page {page.metadata.layout} nojs")}">
     <div class="{ph.ns("page-inner")}">
   """);
@@ -551,7 +555,6 @@ func collectTextNodes(textNodes &List<StrSlice>, this &Italic) {
 func collectTextNodes(textNodes &List<StrSlice>, this &InlineCode) { }
 func collectTextNodes(textNodes &List<StrSlice>, this &Link) { }
 func collectTextNodes(textNodes &List<StrSlice>, this &NoteAnchor) { }
-
 
 
 

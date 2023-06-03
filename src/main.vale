@@ -13,8 +13,8 @@ import stdlib.command.*;
 // func doThing() int extern;
 
 exported func main() {
-  if (numMainArgs() < 2) {
-    println("Usage: " + getMainArg(0) + " [build|testvale]");
+  if (numMainArgs() < 3) {
+    println("Usage: " + getMainArg(0) + " [build|testvale] [directory]");
     return void();
   }
 
@@ -43,41 +43,43 @@ exported func main() {
 
   parsed_flags = parse_all_flags(&flags, all_args);
 
-  if (parsed_flags.unrecognized_inputs.len() < 1) {
+  if (parsed_flags.unrecognized_inputs.len() < 3) {
     panic("Must specify a command (build or testvale).");
   }
+
+  root = Path(parsed_flags.unrecognized_inputs.get(1));
 
   if (parsed_flags.unrecognized_inputs.get(0) == "build") {
     frontendPath = expect_string_flag(&parsed_flags, &flags, "--compiler_dir");
     outFilepath = expect_string_flag(&parsed_flags, &flags, "--out");
 
-    if (parsed_flags.unrecognized_inputs.len() < 2) {
+    if (parsed_flags.unrecognized_inputs.len() < 3) {
       panic("Must specify an input filename.");
     }
-    inFilepath = parsed_flags.unrecognized_inputs.get(1);
+    inFilepath = parsed_flags.unrecognized_inputs.get(2);
 
-    page = parse(inFilepath);
+    page = parse(&root, inFilepath);
 
     output = Output();
     tocRootList = makeTocRootList(&page);
-    printPage(&output, frontendPath, &page, &tocRootList);
+    printPage(&output, &root, frontendPath, &page, &tocRootList);
 
     writeStringToFile(outFilepath, output.assembleStr());
   } else if (parsed_flags.unrecognized_inputs.get(0) == "testvale") {
     frontendPath = expect_string_flag(&parsed_flags, &flags, "--compiler_dir");
 
-    if (parsed_flags.unrecognized_inputs.len() < 2) {
+    if (parsed_flags.unrecognized_inputs.len() < 3) {
       panic("Must specify an input filename.");
     }
-    inFilepath = parsed_flags.unrecognized_inputs.get(1);
+    inFilepath = parsed_flags.unrecognized_inputs.get(2);
 
 
     // println("doing testvale");
 
-    page = parse(inFilepath);
+    page = parse(&root, inFilepath);
 
     testPage(frontendPath, &page);
   } else {
-    println("Unknown mode: " + getMainArg(0));
+    println("Unknown mode: " + parsed_flags.unrecognized_inputs.get(0));
   }
 }

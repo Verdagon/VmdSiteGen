@@ -1,58 +1,35 @@
 
-func blogHeader(blog bool) str {
-  title =
-    if (blog) {
-      """
-        <div class="header title"><span class="header explorations">Languages</span> ∩ <span class="header vale">Architecture</span></div>
-      """
-    } else {
-      """
-        <div class="header title">The <span class="header vale">Vale</span> Programming Language</div>
-      """
-    };
-  links =
-    if (blog) {
-      """
-        <div class="header links">
-          <a class="rss" href="/rss.xml">RSS</a>
-          <a class="github" href="https:\/\/github.com/ValeLang/Vale">Github</a>
-          <a href="https:\/\/github.com/sponsors/ValeLang" class="donate-button">
-            <svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16" data-view-component="true" class="octicon octicon-heart icon-sponsor mr-1 color-fg-sponsors">
-              <path fill-rule="evenodd" d="M4.25 2.5c-1.336 0-2.75 1.164-2.75 3 0 2.15 1.58 4.144 3.365 5.682A20.565 20.565 0 008 13.393a20.561 20.561 0 003.135-2.211C12.92 9.644 14.5 7.65 14.5 5.5c0-1.836-1.414-3-2.75-3-1.373 0-2.609.986-3.029 2.456a.75.75 0 01-1.442 0C6.859 3.486 5.623 2.5 4.25 2.5zM8 14.25l-.345.666-.002-.001-.006-.003-.018-.01a7.643 7.643 0 01-.31-.17 22.075 22.075 0 01-3.434-2.414C2.045 10.731 0 8.35 0 5.5 0 2.836 2.086 1 4.25 1 5.797 1 7.153 1.802 8 3.02 8.847 1.802 10.203 1 11.75 1 13.914 1 16 2.836 16 5.5c0 2.85-2.045 5.231-3.885 6.818a22.08 22.08 0 01-3.744 2.584l-.018.01-.006.003h-.002L8 14.25zm0 0l.345.666a.752.752 0 01-.69 0L8 14.25z"></path>
-            </svg>
-            Sponsor us on GitHub!
-          </a>
-          <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
-          <a class="twitter" href="https:\/\/twitter.com/vale_pl">Twitter</a>
-          <a class="discord" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
-        </div>
-      """
-    } else {
-      """
-        <div class="header links">
-          <a href="/download">Download</a>
-          <a href="/guide/introduction">Guide</a>
-          <a class="rss" href="/rss.xml">RSS</a>
-          <a class="github" href="https:\/\/github.com/ValeLang/Vale">Github</a>
-          <a class="reddit" href="https:\/\/reddit.com/r/Vale">r/Vale</a>
-          <a class="twitter" href="https:\/\/twitter.com/vale_pl">Twitter</a>
-          <a class="discord" href="https:\/\/discord.gg/SNB8yGH">Discord</a>
-        </div>
-      """
-    };
-  return
-    """
+func printBlogHeader(ph &PrintHelper) {
+  blog = ph.metadata.realm == "blog";
+
+  ph.out.println("""
       <div class="header root {if (blog) {" explorations"} else {" mainsite"}}">
         <div class="header contents">
           <a href="/" class="header vorb-container">
             <div class="header vorb"></div>
           </a>
           <a href="/" class="header text">
-            {title}
-          </a>
+  """);
 
-          {links}
+  if (blog) {
+    ph.out.println("""
+      <div class="header title"><span class="header explorations">Languages</span> ∩ <span class="header vale">Architecture</span></div>
+    """);
+  } else {
+    ph.out.println("""
+      <div class="header title">The <span class="header vale">Vale</span> Programming Language</div>
+    """);
+  }
+
+  ph.out.println("""
+          </a>
+  """);
+
+  links_ast = includeInline(ph.root, &NotesCollector(0), "/header_links.vmd");
+  printInlineNode(ph, &links_ast);
+
+  ph.out.println("""
         </div>
       </div>
-    """;
+  """);
 }
