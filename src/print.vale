@@ -322,7 +322,8 @@ func printHeader(ph &PrintHelper) {
           """);
         }
         ph.out.println("""
-                  <span class="{ph.ns("donate-link")}"><a href="https:\/\/github.com\/sponsors\/ValeLang">Sponsor us on GitHub!</a></span>
+                  <span class="{ph.ns("donate-link")}">Sponsor on <a href="https:\/\/github.com\/sponsors\/ValeLang">GitHub</a> 
+                  or <a href="https:\/\/www.patreon.com\/user\/about?u=5018675">Patreon</a>!</span>
         """);
       }
 
