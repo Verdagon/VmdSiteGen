@@ -27,7 +27,7 @@ exported func main() {
   all_args = all_args_list.toImmArray();
 
   flags =
-      [#][
+      [#](
         Flag(
           "--compiler_dir",
           FLAG_STR(),
@@ -39,7 +39,7 @@ exported func main() {
           FLAG_STR(),
           "blork.",
           "bork",
-          "mork mork mork")];
+          "mork mork mork"));
 
   parsed_flags = parse_all_flags(&flags, all_args);
 
